@@ -287,20 +287,20 @@ class GaussianExtractor(object):
         depth_path = os.path.join(path, "depth")
         normal_path = os.path.join(path, "normal")
         depth_normal_path = os.path.join(path, "depth_normal")
-        confidence_path = os.path.join(path, "confidence")
+        opacity_path = os.path.join(path, "opacity")
         os.makedirs(rendered_image_path, exist_ok=True)
         os.makedirs(image_path, exist_ok=True)
         os.makedirs(depth_path, exist_ok=True)
         os.makedirs(normal_path, exist_ok=True)
         os.makedirs(depth_normal_path, exist_ok=True)
-        os.makedirs(confidence_path, exist_ok=True)
+        os.makedirs(opacity_path, exist_ok=True)
         for idx, viewpoint_cam in tqdm(enumerate(self.viewpoint_stack), desc="export images"):
             rendered_image = self.rgbmaps[idx].permute(1,2,0).cpu().numpy()[:,:,::-1]
             image = viewpoint_cam.original_image[0:3].permute(1,2,0).cpu().numpy()[:,:,::-1]
             depth = self.depthmaps[idx][0].cpu().numpy()
             normal = self.normals[idx].permute(1,2,0).cpu().numpy() * 0.5 + 0.5
             depth_normal = self.depth_normals[idx].permute(1,2,0).cpu().numpy() * 0.5 + 0.5
-            alpha = self.alphamaps[idx][0].cpu().numpy()
+            opacity = self.alphamaps[idx][0].cpu().numpy()
 
             cv2.imwrite(os.path.join(rendered_image_path, f"{idx:08d}.png"), rendered_image*255)
             cv2.imwrite(os.path.join(image_path, f"{idx:08d}.png"), image*255)
@@ -314,5 +314,5 @@ class GaussianExtractor(object):
             write_pfm(os.path.join(depth_normal_path, f"{idx:08d}.pfm"), depth_normal)
             cv2.imwrite(os.path.join(depth_normal_path, f"{idx:08d}.png"), 255*(depth_normal-depth_normal.min()) / (depth_normal.max()-depth_normal.min()+1e-10))
 
-            write_pfm(os.path.join(confidence_path, f"{idx:08d}.pfm"), alpha)
-            cv2.imwrite(os.path.join(confidence_path, f"{idx:08d}.png"), 255*(alpha-alpha.min()) / (alpha.max()-alpha.min()+1e-10))
+            write_pfm(os.path.join(opacity_path, f"{idx:08d}.pfm"), opacity)
+            cv2.imwrite(os.path.join(opacity_path, f"{idx:08d}.png"), 255*(opacity-opacity.min()) / (opacity.max()-opacity.min()+1e-10))

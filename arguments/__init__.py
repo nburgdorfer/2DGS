@@ -49,7 +49,7 @@ class ModelParams(ParamGroup):
         self.sh_degree = 3
         self._source_path = ""
         self._model_path = ""
-        self._images = "images"
+        self._images = "rgb"
         self._resolution = -1
         self._white_background = False
         self.data_device = "cuda"
@@ -60,6 +60,7 @@ class ModelParams(ParamGroup):
     def extract(self, args):
         g = super().extract(args)
         g.source_path = os.path.abspath(g.source_path)
+        g.ply_file = args.ply_file
         return g
 
 class PipelineParams(ParamGroup):
@@ -72,7 +73,7 @@ class PipelineParams(ParamGroup):
 
 class OptimizationParams(ParamGroup):
     def __init__(self, parser):
-        self.iterations = 30_000
+        self.iterations = parser.iterations
         self.position_lr_init = 0.00016
         self.position_lr_final = 0.0000016
         self.position_lr_delay_mult = 0.01

@@ -222,48 +222,31 @@ def create_videos(base_dir, input_dir, num_frames=480):
     distance_limits = np.percentile(depth_frame.flatten(), [p, 100 - p])
     lo, hi = [render_dist_curve_fn(x) for x in distance_limits]
     print(f'Video shape is {shape[:2]}')
+
+    video_kwargs = {
+        'shape': shape[:2],
+        'codec': 'h264',
+        'fps': 60,
+        'crf': 18,
+    }
   
-    for k in ["color", "normal", "depth"]:
-        video_file = os.path.join(base_dir, f'{{k}.mp4')
-        input_format = 'gray' if k == 'depth' else 'rgb'
-
-        file_ext = 'png' if k in ['color', 'normal'] else 'pfm'
-
-        if k == 'color':
-            file0 = os.path.join(input_dir, "rendered_image", f"{0:08d}.png")
-            img0 = cv2.imread(file0)
-            shape = img0.shape
-        elif k=="depth":
-            file0 = os.path.join(input_dir, "depth", f"{0:08d}.pfm")
-            img0 = read_pfm(file0)
-            shape = img0.shape
-        elif k=="normal":
-            file0 = os.path.join(input_dir, "normal", f"{0:08d}.pfm")
-            img0 = read_pfm(file0)
-            shape = img0.shape
-
-        video_kwargs = {
-            'shape': shape[:2],
-            'codec': 'h264',
-            'fps': 60,
-            'crf': 18,
-        }
+    for k in ["rendered_image", "normal", "depth", "opacity"]:
+        video_file = os.path.join(base_dir, f'{k}.mp4')
+        input_format = "rgb" if (k=="rendered_image" or k=="normal") else "gray"
+        file_suffix = "png" if k=="rendered_image" else "pfm"
 
         print(f'Making video {video_file}...')
         with media.VideoWriter(
             video_file, **video_kwargs, input_format=input_format) as writer:
             for idx in tqdm(range(num_frames)):
-                if k == "color":
-                    img_file = os.path.join(input_dir, "rendered_image", f"{idx:08d}.png")
+                img_file = os.path.join(input_dir, f"{k}", f"{idx:08d}.{file_suffix}")
+                if k=="rendered_image":
                     img = cv2.imread(img_file)[:,:,::-1]
                     img = img / 255.
-                elif k=="depth":
-                    img_file = os.path.join(input_dir, "depth", f"{idx:08d}.pfm")
+                else:
                     img = read_pfm(img_file)
-                    img = (np.clip(img, near_depth, far_depth) - near_depth) / (far_depth-near_depth)
-                elif k=="normal":
-                    img_file = os.path.join(input_dir, "normal", f"{idx:08d}.pfm")
-                    img = read_pfm(img_file)
+                    if k=="depth":
+                        img = (np.clip(img, near_depth, far_depth) - near_depth) / (far_depth-near_depth)
 
                 frame = (np.clip(np.nan_to_num(img), 0., 1.) * 255.).astype(np.uint8)
                 writer.add_image(frame)

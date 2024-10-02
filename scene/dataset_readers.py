@@ -133,7 +133,7 @@ def storePly(path, xyz, rgb):
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
-def readColmapSceneInfo(path, images, eval, llffhold=8):
+def readColmapSceneInfo(path, images, eval, llffhold=8, ply_file=None):
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -145,7 +145,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
         cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
-    reading_dir = "images" if images == None else images
+    reading_dir = "rgb" if images == None else images
     cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
@@ -158,10 +158,11 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
-    ply_path = os.path.join(path, "scan114.ply")
-    #bin_path = os.path.join(path, "sparse/0/points3D.bin")
-    #txt_path = os.path.join(path, "sparse/0/points3D.txt")
-    #if not os.path.exists(ply_path):
+    if ply_file != None:
+        ply_path = os.path.join(path, ply_file)
+    #else:
+    #    bin_path = os.path.join(path, "sparse/0/points3D.bin")
+    #    txt_path = os.path.join(path, "sparse/0/points3D.txt")
     #    print("Converting point3d.bin to .ply, will happen only the first time you open the scene.")
     #    try:
     #        xyz, rgb, _ = read_points3D_binary(bin_path)
