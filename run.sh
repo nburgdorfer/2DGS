@@ -25,17 +25,12 @@ SCANS=( \
         "scan118" \
     )
 
-### Run with sparse COLMAP points
+### Run with sparse COLMAP points and dense MVSNet points
 for SCAN in ${SCANS[@]}
 do
     CUDA_VISIBLE_DEVICE=$1 python train.py -s /mnt/Drive1/Results/DTU/MVSNet/${SCAN} -m /mnt/Drive1/Results/DTU/2DGS/sparse/${SCAN} --ply_file ${SCAN}_sparse.ply
     CUDA_VISIBLE_DEVICE=$1 python render.py -s /mnt/Drive1/Results/DTU/MVSNet/${SCAN} -m /mnt/Drive1/Results/DTU/2DGS/sparse/${SCAN}
-done
 
-
-### Run with dense MVS points
-for SCAN in ${SCANS[@]}
-do
     CUDA_VISIBLE_DEVICE=$1 python train.py -s /mnt/Drive1/Results/DTU/MVSNet/${SCAN} -m /mnt/Drive1/Results/DTU/2DGS/dense/${SCAN} --ply_file ${SCAN}.ply
     CUDA_VISIBLE_DEVICE=$1 python render.py -s /mnt/Drive1/Results/DTU/MVSNet/${SCAN} -m /mnt/Drive1/Results/DTU/2DGS/dense/${SCAN}
 done
