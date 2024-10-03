@@ -22,15 +22,15 @@ from src.datasets.BaseDataset import build_dataset
 from cvt.common import print_gpu_mem, to_gpu
 from cvt.io import write_pfm, load_ckpt, save_ckpt
 
-class BasePipeline():
-    def __init__(self, cfg, config_path, log_path, model_name, scene=None):
+class Pipeline():
+    def __init__(self, cfg, config_path, scene):
         self.cfg = cfg
         self.device = self.cfg["device"]
         self.scene = scene
 
         # set data paths
-        self.data_path = os.path.join(self.cfg["data_path"], self.inference_scene[0])
-        self.output_path = os.path.join(self.cfg["output_path"], self.inference_scene[0])
+        self.data_path = os.path.join(self.cfg["data_path"], self.scene)
+        self.output_path = os.path.join(self.cfg["output_path"], self.scene)
         self.ckpt_path = os.path.join(self.output_path, "ckpts")
         self.log_path = os.path.join(self.output_path, "log")
         self.depth_path = os.path.join(self.output_path, "depth")
@@ -55,6 +55,7 @@ class BasePipeline():
 
         # build all network components
         self.build_dataset()
+        sys.exit()
         self.build_model()
         self.build_optimizer()
         self.build_scheduler()
@@ -71,13 +72,13 @@ class BasePipeline():
     def compute_stats(self):
         raise NotImplementedError()
 
-    def save_output(self, data, output, sample_ind):
+    def save_output(self, data, output, ind):
         with torch.set_grad_enabled((torch.is_grad_enabled and not torch.is_inference_mode_enabled)):
             # save confidence map
             pass
 
     def build_dataset(self):
-        self.dataset = build_dataset(self.cfg, self.scenes)
+        self.dataset = build_dataset(self.cfg, self.scene)
 
     def build_optimizer(self):
         rate = self.cfg["learning_rate"]

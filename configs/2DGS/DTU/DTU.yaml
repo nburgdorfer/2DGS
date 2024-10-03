@@ -1,5 +1,5 @@
 data_path: /home/nate/data/DTU/
-points_data_path: /mnt/Drive1/Results/DTU/MVSNet/
+points_data_path: #/mnt/Drive1/Results/DTU/MVSNet/Points
 output_path: /mnt/Drive1/Results/DTU/2DGS/
 device: cuda:0
 seed: 43
@@ -12,16 +12,9 @@ camera:
   far: 937
   crop_h: 48
   crop_w: 64
-  baseline_mode: min
 
 inference:
-  ckpt_file: pretrained_models/GBiNet/DTU/model.pt
-  frame_spacing: 1
-  num_frame: 5
-  sample_mode: cluster
   scale: 1.0
-  visualize: True
-  vis_freq: 1
 
 loss:
   dist_iter: 3000
@@ -29,15 +22,8 @@ loss:
   dssim_weight: 0.2
   normal_iter: 7000
   normal_weight: 0.05
-  res_weights: [1,1,1,1]
 
-mvs_model:
-  feature_channels: [64,32,16,8] # coarse -> fine
-  group_channels: [8,8,8,4] # coarse -> fine
-  stage_ids: [0,0,1,1,2,2,3,3] # coarse -> fine
-  confidence_iterations: 6 # number of iterations to accumulate confidence
-
-gs_model:
+model:
   sh_degree: 3
   white_background: False
 
@@ -60,24 +46,6 @@ optimization:
 
 rendering:
   maps: ['RGB', 'Alpha', 'Normal', 'Depth', 'Edge', 'Curvature']
-
-training:
-  batch_size: 4
-  ckpt_file: 
-  epochs: 30
-  frame_spacing: 1
-  grad_clip: 10.0
-  learning_rate: 0.0001
-  lr_steps: 10,12,14
-  lr_gamma: 0.50
-  max_training_samples: 5000
-  max_val_samples: 1000
-  num_frame: 5
-  random_crop: True
-  sample_mode: cluster
-  scale: 0.5
-  visualize: True
-  vis_freq: 100
 
 visualization:
   ip: "127.0.0.1"

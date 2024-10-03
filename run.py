@@ -5,6 +5,7 @@ from cvt.common import set_random_seed
 
 from src.pipeline import Pipeline
 from src.config import load_config, load_scenes, get_argparser
+from src.gaussian_renderer import network_gui
 
 parser = get_argparser()
 ARGS = parser.parse_args()
@@ -27,7 +28,6 @@ for network in scenes.keys():
 
     total_samples = len(scenes[network]["scenes"])
     for i, scene in enumerate(scenes[network]["scenes"]):
-        print(f"\n----Running DMFNet on {network} - {scene}----")
-        scene_dict = {network: {"scenes": [scene]}}
-        pipeline = Pipeline(cfg=cfg, config_path=ARGS.config_path, log_path=ARGS.log_path, inference_scene=scene_dict)
-        pipeline.inference()
+        print(f"\n----Running 2DGS on {cfg['dataset']} - {scene}----")
+        pipeline = Pipeline(cfg=cfg, config_path=ARGS.config_path, scene=scene)
+        pipeline.run()
