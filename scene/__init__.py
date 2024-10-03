@@ -27,7 +27,7 @@ class Scene:
         :param path: Path to colmap scene main folder.
         """
         self.model_path = args.model_path
-        self.loaded_iter = None
+        self.loaded_iter = load_iteration
         self.gaussians = gaussians
 
         #if load_iteration:
@@ -48,6 +48,7 @@ class Scene:
         else:
             assert False, "Could not recognize scene type!"
 
+        
         if not self.loaded_iter:
             os.makedirs(os.path.join(self.model_path,"points"), exist_ok=True)
             with open(scene_info.ply_path, 'rb') as src_file, open(os.path.join(self.model_path, "points", "input.ply") , 'wb') as dest_file:
