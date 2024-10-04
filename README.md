@@ -18,6 +18,14 @@ sudo apt install g++-9
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9
 ```
 
+###Buidling the Gaussian Viewer
+```bash
+sudo apt install -y libglew-dev libassimp-dev libboost-all-dev libgtk-3-dev libopencv-dev libglfw3-dev libavdevice-dev libavcodec-dev libeigen3-dev libxxf86vm-dev libembree-dev
+cd SIBR_viewers
+cmake -Bbuild . -DCMAKE_BUILD_TYPE=Release # add -G Ninja to build faster
+cmake --build build -j24 --target install
+```
+
 ## Training
 ```bash
 python train.py -s <path to COLMAP or NeRF Synthetic dataset>
