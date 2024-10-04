@@ -18,16 +18,12 @@ set_random_seed(cfg["seed"])
 #### Start GUI server ####
 network_gui.init(cfg["visualization"]["ip"], cfg["visualization"]["port"])
 
-#### Load Scene Lists ####
-scenes = load_scenes(os.path.join(ARGS.config_path, "scenes", "inference.yaml"))
+#### Load Scenes ####
+scene_dict = load_scenes(os.path.join(ARGS.config_path, "scenes", "inference.yaml"))
 
-for network in scenes.keys():
-    if scenes[network]["scenes"] == None:
-        continue
-
-    total_samples = len(scenes[network]["scenes"])
-    for i, scene in enumerate(scenes[network]["scenes"]):
-        print(f"\n----Running 2DGS on {cfg['dataset']} - {scene}----")
-        pipeline = Pipeline(cfg=cfg, config_path=ARGS.config_path, scene=scene)
-        pipeline.run()
-        pipeline.render()
+total_samples = len(scene_dict["scenes"])
+for i, scene in enumerate(scene_dict["scenes"]):
+    print(f"\n----Running 2DGS on {cfg['dataset']} - {scene}----")
+    pipeline = Pipeline(cfg=cfg, config_path=ARGS.config_path, scene=scene)
+    pipeline.run()
+    pipeline.render()
