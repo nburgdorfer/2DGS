@@ -11,8 +11,8 @@ conda env create --file environment.yml
 conda activate surfel_splatting
 ```
 
-[!NOTE]
-The differetiable rasterizer requires g++-9.
+> [!NOTE]
+> The differetiable rasterizer requires g++-9.
 ```bash
 sudo apt install g++-9
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9
