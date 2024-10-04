@@ -1,14 +1,3 @@
-import os
-import random
-import numpy as np
-import torch
-import torch.utils.data as data
-import cv2
-import sys
-
-from cvt.io import read_pfm
-from cvt.camera import compute_baselines, _intrinsic_pyramid, scale_cam, crop_cam
-from cvt.common import _build_depth_pyramid, _normalize_image, crop_image
 
 def build_dataset(cfg, scene):
     if cfg["dataset"] == 'TNT':
@@ -30,23 +19,14 @@ class BaseDataset():
         self.crop_w = self.cfg["camera"]["crop_w"]
         self.scale = self.cfg["inference"]["scale"]
 
-        self.set_paths()
-
-        self.samples = self.build_samples()
-        print(self.samples)
-        sys.exit()
-
-    def build_samples(self, frame_spacing):
+    def get_cameras(self):
         raise NotImplementedError()
 
-    def load_intrinsics(self):
+    def get_images(self):
         raise NotImplementedError()
 
-    def get_pose(self, frame_id):
+    def get_depths(self):
         raise NotImplementedError()
 
-    def get_image(self, image_file, scale=True):
-        raise NotImplementedError()
-
-    def get_depth(self, depth_file, scale=True):
+    def get_points(self):
         raise NotImplementedError()

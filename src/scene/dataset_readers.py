@@ -91,8 +91,6 @@ def readSFMCameras(cam_extrinsics, cam_intrinsics, images_folder):
         cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
                               image_path=image_path, image_name=image_name, width=width, height=height)
         cam_infos.append(cam_info)
-        print(cam_info)
-        sys.exit()
     sys.stdout.write('\n')
     return cam_infos
 
@@ -132,6 +130,8 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
                               image_path=image_path, image_name=image_name, width=width, height=height)
         cam_infos.append(cam_info)
+    print(cam_infos)
+    sys.exit()
     sys.stdout.write('\n')
     return cam_infos
 
@@ -211,14 +211,13 @@ def storePly(path, xyz, rgb):
 #                           ply_path=ply_path)
 #    return scene_info
 
-def readColmapSceneInfo(path, images, eval, llffhold=8, ply_file=None):
+def readColmapSceneInfo(path, images, eval, scan, llffhold=8, ply_file=None):
     cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
     cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
     cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
     cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
 
-    reading_dir = "rgb" if images == None else images
-    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
+    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join("/home/nate/data/DTU/Images", scan))
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
     if eval:

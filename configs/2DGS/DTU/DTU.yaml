@@ -10,8 +10,8 @@ camera:
   width: 1600
   near: 425
   far: 937
-  crop_h: 48
-  crop_w: 64
+  crop_h: 0
+  crop_w: 0
 
 inference:
   scale: 1.0
@@ -31,13 +31,15 @@ optimization:
   ckpt_freq: -1
   densification_interval: 100
   densify_from_iter: 500
-  densify_until_iter: 15000
   densify_grad_threshold: 0.0002
+  densify_until_iter: 15000
   feature_lr: 0.0025
   iterations: 30000
-  position_lr_init: 0.00016
-  position_lr_final: 0.0000016
+  percent_dense: 0.01
   position_lr_delay_mult: 0.01
+  position_lr_final: 0.0000016
+  position_lr_init: 0.00016
+  position_lr_max_steps: 30000
   opacity_lr: 0.05
   opacity_reset_interval: 3000
   opacity_th: 0.05
@@ -50,4 +52,4 @@ rendering:
 visualization:
   ip: "127.0.0.1"
   max_depth_error: 5.0
-  port: 6009
+  port: 6010

@@ -17,7 +17,7 @@ from src.utils.system_utils import searchForMaxIteration
 from src.scene.dataset_readers import sceneLoadTypeCallbacks
 from src.scene.gaussian_model import GaussianModel
 from src.arguments import ModelParams
-from src.utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
+#from src.utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
 
 class Scene:
 
@@ -42,7 +42,7 @@ class Scene:
         self.test_cameras = {}
 
         if os.path.exists(os.path.join(args.source_path, "sparse")):
-            scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval, ply_file=args.ply_file)
+            scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval, scan=args.scan, ply_file=args.ply_file)
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
             print("Found transforms_train.json file, assuming Blender data set!")
             scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval)

@@ -20,7 +20,6 @@ network_gui.init(cfg["visualization"]["ip"], cfg["visualization"]["port"])
 
 #### Load Scene Lists ####
 scenes = load_scenes(os.path.join(ARGS.config_path, "scenes", "inference.yaml"))
-print(scenes)
 
 for network in scenes.keys():
     if scenes[network]["scenes"] == None:
