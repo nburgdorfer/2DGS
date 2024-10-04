@@ -39,6 +39,7 @@ class DTU(BaseDataset):
 
             camera[1,0,2] -= (self.crop_w//2)
             camera[1,1,2] -= (self.crop_h//2)
+            camera[1] = scale_cam(camera[1], scale=self.scale)
 
             if i==0:
                 self.H = int(self.scale * (self.cfg["camera"]["height"] - self.crop_h))
