@@ -14,12 +14,13 @@ import numpy as np
 import os
 import math
 from tqdm import tqdm
-from utils.render_utils import save_img_f32, save_img_u8
 from functools import partial
 import open3d as o3d
 import trimesh
 from cvt.io import write_pfm
 import cv2
+
+from src.utils.render_utils import save_img_f32, save_img_u8
 
 def post_process_mesh(mesh, cluster_to_keep=1000):
     """
@@ -73,7 +74,7 @@ def to_cam_open3d(viewpoint_stack):
 
 
 class GaussianExtractor(object):
-    def __init__(self, gaussians, render, pipe, bg_color=None):
+    def __init__(self, cfg, gaussians, render, bg_color=None):
         """
         a class that extracts attributes a scene presented by 2DGS
 
@@ -86,7 +87,7 @@ class GaussianExtractor(object):
             bg_color = [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
         self.gaussians = gaussians
-        self.render = partial(render, pipe=pipe, bg_color=background)
+        self.render = partial(render, cfg=cfg, bg_color=background)
         self.clean()
 
     @torch.no_grad()
@@ -106,7 +107,7 @@ class GaussianExtractor(object):
         self.clean()
         self.viewpoint_stack = viewpoint_stack
         for i, viewpoint_cam in tqdm(enumerate(self.viewpoint_stack), desc="reconstruct radiance fields"):
-            render_pkg = self.render(viewpoint_cam, self.gaussians)
+            render_pkg = self.render(viewpoint_camera=viewpoint_cam, pc=self.gaussians)
             rgb = render_pkg['render']
             alpha = render_pkg['rend_alpha']
             normal = torch.nn.functional.normalize(render_pkg['rend_normal'], dim=0)
@@ -128,7 +129,7 @@ class GaussianExtractor(object):
         """
         Estimate the bounding sphere given camera pose
         """
-        from utils.render_utils import transform_poses_pca, focus_point_fn
+        from src.utils.render_utils import transform_poses_pca, focus_point_fn
         torch.cuda.empty_cache()
         c2ws = np.array([np.linalg.inv(np.asarray((cam.world_view_transform.T).cpu().numpy())) for cam in self.viewpoint_stack])
         poses = c2ws[:,:3,:] @ np.diag([1, -1, -1, 1])
@@ -258,7 +259,7 @@ class GaussianExtractor(object):
         print(f"Computing sdf gird resolution {N} x {N} x {N}")
         print(f"Define the voxel_size as {voxel_size}")
         sdf_function = lambda x: compute_unbounded_tsdf(x, inv_contraction, voxel_size)
-        from utils.mcube_utils import marching_cubes_with_contraction
+        from src.utils.mcube_utils import marching_cubes_with_contraction
         R = contract(normalize(self.gaussians.get_xyz)).norm(dim=-1).cpu().numpy()
         R = np.quantile(R, q=0.95)
         R = min(R+0.01, 1.9)

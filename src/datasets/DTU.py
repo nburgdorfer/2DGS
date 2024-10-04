@@ -24,7 +24,7 @@ class DTU(BaseDataset):
         self.image_path = os.path.join(self.data_path, "Images", self.scene)
         self.depth_path = os.path.join(self.data_path, "Depths", self.scene)
         self.camera_path = os.path.join(self.data_path, "Cameras")
-        self.points_file = os.path.join(self.data_path, "Sparse_Points", f"{self.scene}_sparse.ply")
+        self.points_file = os.path.join(self.data_path, "Points_Sparse", f"{self.scene}_sparse.ply")
 
     def get_cameras(self):
         cameras = []

@@ -30,3 +30,4 @@ for network in scenes.keys():
         print(f"\n----Running 2DGS on {cfg['dataset']} - {scene}----")
         pipeline = Pipeline(cfg=cfg, config_path=ARGS.config_path, scene=scene)
         pipeline.run()
+        pipeline.render()

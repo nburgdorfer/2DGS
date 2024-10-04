@@ -1,0 +1,3 @@
+/home/nate/dev/2DGS/submodules/diff-surfel-rasterization/CMakeFiles/CudaRasterizer.dir
+/home/nate/dev/2DGS/submodules/diff-surfel-rasterization/CMakeFiles/edit_cache.dir
+/home/nate/dev/2DGS/submodules/diff-surfel-rasterization/CMakeFiles/rebuild_cache.dir

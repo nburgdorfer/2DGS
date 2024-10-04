@@ -1,0 +1,1 @@
+-I"/home/nate/dev/2DGS/submodules/diff-surfel-rasterization/cuda_rasterizer" -I"/home/nate/dev/2DGS/submodules/diff-surfel-rasterization/third_party/glm" -I"/usr/local/cuda-12.6/targets/x86_64-linux/include"

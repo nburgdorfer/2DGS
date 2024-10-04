@@ -30,6 +30,8 @@ from src.utils.camera_utils import cameraList_from_camInfos
 from src.utils.graphics_utils import focal2fov, getNerfppNorm, BasicPointCloud
 from src.utils.image_utils import psnr, render_net_image
 from src.utils.loss_utils import l1_loss, ssim
+from src.utils.mesh_utils import GaussianExtractor
+from src.utils.render_utils import generate_path, create_videos
 
 class CameraInfo(NamedTuple):
     uid: int
@@ -119,7 +121,7 @@ class Pipeline():
         lr_gamma = float(self.cfg["training"]["lr_gamma"])
         self.lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, lr_steps, gamma=lr_gamma)
 
-    def build_2dgs_scene(self, cameras, images, pcd):
+    def build_2dgs_scene(self, cameras, images, pcd, shuffle=True):
         cam_infos = []
         for i,camera in enumerate(cameras):
             height, width, _ = images[i].shape
@@ -146,7 +148,8 @@ class Pipeline():
 
         camlist = scene_info.train_cameras
 
-        random.shuffle(scene_info.train_cameras)  # Multi-res consistent random shuffling
+        if shuffle:
+            random.shuffle(scene_info.train_cameras)  # Multi-res consistent random shuffling
         cameras_extent = scene_info.nerf_normalization["radius"]
         train_cameras = cameraList_from_camInfos(scene_info.train_cameras, self.cfg)
 
@@ -154,6 +157,57 @@ class Pipeline():
         gaussians.create_from_pcd(scene_info.point_cloud, cameras_extent)
 
         return train_cameras, cameras_extent, gaussians
+
+    def render(self):
+        # load data
+        cameras = self.dataset.get_cameras()
+        images = self.dataset.get_images()
+        depths = self.dataset.get_depths()
+        points = self.dataset.get_points()
+
+        # build 2DGS scene
+        train_cameras, cameras_extent, gaussians = self.build_2dgs_scene(cameras, images, points, shuffle=False)
+
+        # set background color
+        bg_color = [1, 1, 1] if self.cfg["model"]["white_background"] else [0, 0, 0]
+        background = torch.tensor(bg_color, dtype=torch.float32, device=self.device)
+
+        # load gaussian extractor
+        gaussExtractor = GaussianExtractor(self.cfg, gaussians, render, bg_color=bg_color)    
+
+        print("export training images ...")
+        gaussExtractor.reconstruction(train_cameras)
+        gaussExtractor.export_image(self.output_path)
+        
+        print("render videos ...")
+        cam_traj = generate_path(train_cameras)
+        gaussExtractor.reconstruction(cam_traj)
+        gaussExtractor.export_image(self.video_path)
+        create_videos(base_dir=self.video_path, input_dir=self.video_path)
+
+        #if args.render_mesh:
+        #    print("export mesh ...")
+        #    os.makedirs(train_dir, exist_ok=True)
+        #    # set the active_sh to 0 to export only diffuse texture
+        #    gaussExtractor.gaussians.active_sh_degree = 0
+        #    gaussExtractor.reconstruction(scene.getTrainCameras())
+        #    # extract the mesh and save
+        #    if args.unbounded:
+        #        name = 'fuse_unbounded.ply'
+        #        mesh = gaussExtractor.extract_mesh_unbounded(resolution=args.mesh_res)
+        #    else:
+        #        name = 'fuse.ply'
+        #        depth_trunc = (gaussExtractor.radius * 2.0) if args.depth_trunc < 0  else args.depth_trunc
+        #        voxel_size = (depth_trunc / args.mesh_res) if args.voxel_size < 0 else args.voxel_size
+        #        sdf_trunc = 5.0 * voxel_size if args.sdf_trunc < 0 else args.sdf_trunc
+        #        mesh = gaussExtractor.extract_mesh_bounded(voxel_size=voxel_size, sdf_trunc=sdf_trunc, depth_trunc=depth_trunc)
+        #    
+        #    o3d.io.write_triangle_mesh(os.path.join(train_dir, name), mesh)
+        #    print("mesh saved at {}".format(os.path.join(train_dir, name)))
+        #    # post-process the mesh and save, saving the largest N clusters
+        #    mesh_post = post_process_mesh(mesh, cluster_to_keep=args.num_cluster)
+        #    o3d.io.write_triangle_mesh(os.path.join(train_dir, name.replace('.ply', '_post.ply')), mesh_post)
+        #    print("mesh post processed saved at {}".format(os.path.join(train_dir, name.replace('.ply', '_post.ply'))))
 
     def run(self):
         # load data
