@@ -52,4 +52,4 @@ rendering:
 visualization:
   ip: "127.0.0.1"
   max_depth_error: 5.0
-  port: 6010
+  port: 6009
