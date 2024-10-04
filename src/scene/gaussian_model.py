@@ -22,6 +22,13 @@ from src.utils.system_utils import mkdir_p
 from src.utils.graphics_utils import BasicPointCloud
 from src.utils.general_utils import strip_symmetric, build_scaling_rotation
 
+class SceneInfo(NamedTuple):
+    point_cloud: BasicPointCloud
+    train_cameras: list
+    test_cameras: list
+    nerf_normalization: dict
+    ply_path: str  
+
 class GaussianModel:
 
     def setup_functions(self):

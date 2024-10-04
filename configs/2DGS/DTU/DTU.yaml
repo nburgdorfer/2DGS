@@ -28,7 +28,7 @@ model:
   white_background: False
 
 optimization:
-  ckpt_freq: -1
+  ckpt_freq: 10000
   densification_interval: 100
   densify_from_iter: 500
   densify_grad_threshold: 0.0002
@@ -47,6 +47,7 @@ optimization:
   scaling_lr: 0.005
 
 rendering:
+  iteration: -1 # gaussian model iteration to load
   maps: ['RGB', 'Alpha', 'Normal', 'Depth', 'Edge', 'Curvature']
 
 visualization:

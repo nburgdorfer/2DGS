@@ -17,6 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from typing import NamedTuple
+import open3d as o3d
 
 from cvt.common import print_gpu_mem, to_gpu
 from cvt.io import write_pfm, load_ckpt, save_ckpt
@@ -24,34 +25,16 @@ from cvt.io import write_pfm, load_ckpt, save_ckpt
 ## Custom libraries
 from src.config import save_config
 from src.datasets.BaseDataset import build_dataset
+
+### 2DGS dependencies
 from src.gaussian_renderer import render, network_gui
-from src.scene import GaussianModel
-from src.utils.camera_utils import cameraList_from_camInfos
+from src.scene import GaussianModel, SceneInfo
+from src.utils.camera_utils import cameraList_from_camInfos, CameraInfo
 from src.utils.graphics_utils import focal2fov, getNerfppNorm, BasicPointCloud
 from src.utils.image_utils import psnr, render_net_image
 from src.utils.loss_utils import l1_loss, ssim
 from src.utils.mesh_utils import GaussianExtractor
 from src.utils.render_utils import generate_path, create_videos
-
-class CameraInfo(NamedTuple):
-    uid: int
-    R: np.array
-    T: np.array
-    FovY: np.array
-    FovX: np.array
-    image: np.array
-    image_path: str
-    image_name: str
-    width: int
-    height: int 
-
-class SceneInfo(NamedTuple):
-    point_cloud: BasicPointCloud
-    train_cameras: list
-    test_cameras: list
-    nerf_normalization: dict
-    ply_path: str  
-
 
 class Pipeline():
     def __init__(self, cfg, config_path, scene):
@@ -121,7 +104,7 @@ class Pipeline():
         lr_gamma = float(self.cfg["training"]["lr_gamma"])
         self.lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, lr_steps, gamma=lr_gamma)
 
-    def build_2dgs_scene(self, cameras, images, pcd, shuffle=True):
+    def build_2dgs_scene(self, cameras, images, pcd, gaussians_file=None, shuffle=True):
         cam_infos = []
         for i,camera in enumerate(cameras):
             height, width, _ = images[i].shape
@@ -154,7 +137,10 @@ class Pipeline():
         train_cameras = cameraList_from_camInfos(scene_info.train_cameras, self.cfg)
 
         gaussians = GaussianModel(self.cfg["model"]["sh_degree"])
-        gaussians.create_from_pcd(scene_info.point_cloud, cameras_extent)
+        if gaussians_file==None:
+            gaussians.create_from_pcd(scene_info.point_cloud, cameras_extent)
+        else:
+            gaussians.load_ply(gaussians_file)
 
         return train_cameras, cameras_extent, gaussians
 
@@ -165,8 +151,14 @@ class Pipeline():
         depths = self.dataset.get_depths()
         points = self.dataset.get_points()
 
+        # optimized gaussians file
+        if self.cfg["rendering"]["iteration"] == -1:
+            gaussians_file = os.path.join(self.points_path, f"{self.scene}.ply")
+        else:
+            gaussians_file = os.path.join(self.points_path, f"{self.scene}_{self.cfg['rendering']['iteration']:08d}.ply")
+
         # build 2DGS scene
-        train_cameras, cameras_extent, gaussians = self.build_2dgs_scene(cameras, images, points, shuffle=False)
+        train_cameras, cameras_extent, gaussians = self.build_2dgs_scene(cameras, images, points, gaussians_file=gaussians_file, shuffle=False)
 
         # set background color
         bg_color = [1, 1, 1] if self.cfg["model"]["white_background"] else [0, 0, 0]
@@ -293,7 +285,7 @@ class Pipeline():
 
                 if iteration == self.iterations:
                     progress_bar.close()
-                    gaussians.save_ply(os.path.join(self.points_path, "points.ply"))
+                    gaussians.save_ply(os.path.join(self.points_path, f"{self.scene}.ply"))
 
                 # Densification
                 if iteration < self.cfg["optimization"]["densify_until_iter"]:
@@ -315,6 +307,7 @@ class Pipeline():
 
                 if ((iteration % self.cfg["optimization"]["ckpt_freq"] == 0 and self.cfg["optimization"]["ckpt_freq"] != -1) or (iteration == self.iterations)):
                     torch.save((gaussians.capture(), iteration), os.path.join(self.ckpt_path, f"{iteration}.pt"))
+                    gaussians.save_ply(os.path.join(self.points_path, f"{self.scene}_{iteration:08d}.ply"))
 
             with torch.no_grad():
                 if network_gui.conn == None:

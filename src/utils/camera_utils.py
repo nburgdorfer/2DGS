@@ -4,6 +4,19 @@ import torch
 
 from src.scene.cameras import Camera
 
+class CameraInfo(NamedTuple):
+    uid: int
+    R: np.array
+    T: np.array
+    FovY: np.array
+    FovX: np.array
+    image: np.array
+    image_path: str
+    image_name: str
+    width: int
+    height: int 
+
+
 def loadCam(cfg, ind, cam_info):
     orig_h, orig_w,_ = cam_info.image.shape
     global_down = 1

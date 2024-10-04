@@ -296,8 +296,8 @@ class GaussianExtractor(object):
         os.makedirs(depth_normal_path, exist_ok=True)
         os.makedirs(opacity_path, exist_ok=True)
         for idx, viewpoint_cam in tqdm(enumerate(self.viewpoint_stack), desc="export images"):
-            rendered_image = self.rgbmaps[idx].permute(1,2,0).cpu().numpy()[:,:,::-1]
-            image = viewpoint_cam.original_image[0:3].permute(1,2,0).cpu().numpy()[:,:,::-1]
+            rendered_image = self.rgbmaps[idx].permute(1,2,0).cpu().numpy()
+            image = viewpoint_cam.original_image[0:3].permute(1,2,0).cpu().numpy()
             depth = self.depthmaps[idx][0].cpu().numpy()
             normal = self.normals[idx].permute(1,2,0).cpu().numpy() * 0.5 + 0.5
             depth_normal = self.depth_normals[idx].permute(1,2,0).cpu().numpy() * 0.5 + 0.5
