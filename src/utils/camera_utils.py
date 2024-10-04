@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import torch
+from typing import NamedTuple
 
 from src.scene.cameras import Camera
 

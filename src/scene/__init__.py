@@ -19,6 +19,16 @@ from src.scene.gaussian_model import GaussianModel
 from src.arguments import ModelParams
 #from src.utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
 
+from src.utils.graphics_utils import BasicPointCloud
+from typing import NamedTuple
+class SceneInfo(NamedTuple):
+    point_cloud: BasicPointCloud
+    train_cameras: list
+    test_cameras: list
+    nerf_normalization: dict
+    ply_path: str  
+
+
 class Scene:
 
     gaussians : GaussianModel

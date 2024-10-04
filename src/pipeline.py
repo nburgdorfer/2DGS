@@ -30,7 +30,7 @@ from src.datasets.BaseDataset import build_dataset
 from src.gaussian_renderer import render, network_gui
 from src.scene import GaussianModel, SceneInfo
 from src.utils.camera_utils import cameraList_from_camInfos, CameraInfo
-from src.utils.graphics_utils import focal2fov, getNerfppNorm, BasicPointCloud
+from src.utils.graphics_utils import focal2fov, getNerfppNorm
 from src.utils.image_utils import psnr, render_net_image
 from src.utils.loss_utils import l1_loss, ssim
 from src.utils.mesh_utils import GaussianExtractor
