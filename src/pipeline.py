@@ -37,7 +37,6 @@ class Pipeline():
         self.output_path = os.path.join(self.cfg["output_path"], self.scene)
         self.ckpt_path = os.path.join(self.output_path, "ckpts")
         self.log_path = os.path.join(self.output_path, "log")
-        self.points_path = os.path.join(self.output_path, "points")
         self.depth_path = os.path.join(self.output_path, "depth")
         self.normal_path = os.path.join(self.output_path, "normal")
         self.depth_normal_path = os.path.join(self.output_path, "depth_normal")
@@ -48,7 +47,6 @@ class Pipeline():
         # create directories
         os.makedirs(self.output_path, exist_ok=True)
         os.makedirs(self.ckpt_path, exist_ok=True)
-        os.makedirs(self.points_path, exist_ok=True)
         os.makedirs(self.depth_path, exist_ok=True)
         os.makedirs(self.normal_path, exist_ok=True)
         os.makedirs(self.depth_normal_path, exist_ok=True)
@@ -141,7 +139,7 @@ class Pipeline():
                 "nerf_normalization": nerf_normalization,
                 "ply_path": self.dataset.points_file
                 }
-        with open(scene_info["ply_path"], 'rb') as src_file, open(os.path.join(self.points_path, "input.ply") , 'wb') as dest_file:
+        with open(scene_info["ply_path"], 'rb') as src_file, open(os.path.join(self.output_path, "input.ply") , 'wb') as dest_file:
             dest_file.write(src_file.read())
 
         camlist = scene_info["train_cameras"]
@@ -192,30 +190,6 @@ class Pipeline():
         gaussExtractor.reconstruction(cam_traj)
         output = gaussExtractor.export_image()
         self.save_output_video(output)
-
-        #if args.render_mesh:
-        #    print("export mesh ...")
-        #    os.makedirs(train_dir, exist_ok=True)
-        #    # set the active_sh to 0 to export only diffuse texture
-        #    gaussExtractor.gaussians.active_sh_degree = 0
-        #    gaussExtractor.reconstruction(scene.getTrainCameras())
-        #    # extract the mesh and save
-        #    if args.unbounded:
-        #        name = 'fuse_unbounded.ply'
-        #        mesh = gaussExtractor.extract_mesh_unbounded(resolution=args.mesh_res)
-        #    else:
-        #        name = 'fuse.ply'
-        #        depth_trunc = (gaussExtractor.radius * 2.0) if args.depth_trunc < 0  else args.depth_trunc
-        #        voxel_size = (depth_trunc / args.mesh_res) if args.voxel_size < 0 else args.voxel_size
-        #        sdf_trunc = 5.0 * voxel_size if args.sdf_trunc < 0 else args.sdf_trunc
-        #        mesh = gaussExtractor.extract_mesh_bounded(voxel_size=voxel_size, sdf_trunc=sdf_trunc, depth_trunc=depth_trunc)
-        #    
-        #    o3d.io.write_triangle_mesh(os.path.join(train_dir, name), mesh)
-        #    print("mesh saved at {}".format(os.path.join(train_dir, name)))
-        #    # post-process the mesh and save, saving the largest N clusters
-        #    mesh_post = post_process_mesh(mesh, cluster_to_keep=args.num_cluster)
-        #    o3d.io.write_triangle_mesh(os.path.join(train_dir, name.replace('.ply', '_post.ply')), mesh_post)
-        #    print("mesh post processed saved at {}".format(os.path.join(train_dir, name.replace('.ply', '_post.ply'))))
 
     def run(self):
         # load data
@@ -301,7 +275,7 @@ class Pipeline():
 
                 if iteration == self.iterations:
                     progress_bar.close()
-                    gaussians.save_ply(os.path.join(self.points_path, f"{self.scene}.ply"))
+                    gaussians.save_ply(os.path.join(self.output_path, f"gaussians.ply"))
 
                 # Densification
                 if iteration < self.cfg["optimization"]["densify_until_iter"]:
@@ -323,7 +297,7 @@ class Pipeline():
 
                 if ((iteration % self.cfg["optimization"]["ckpt_freq"] == 0 and self.cfg["optimization"]["ckpt_freq"] != -1) or (iteration == self.iterations)):
                     torch.save((gaussians.capture(), iteration), os.path.join(self.ckpt_path, f"{iteration}.pt"))
-                    gaussians.save_ply(os.path.join(self.points_path, f"{self.scene}_{iteration:08d}.ply"))
+                    gaussians.save_ply(os.path.join(self.ckpt_path, f"gaussians_{iteration:08d}.ply"))
 
             #with torch.no_grad():
             #    if network_gui.conn == None:

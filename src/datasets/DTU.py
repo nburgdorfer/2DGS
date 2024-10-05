@@ -25,6 +25,10 @@ class DTU(BaseDataset):
         self.depth_path = os.path.join(self.data_path, "Depths", self.scene)
         self.camera_path = os.path.join(self.data_path, "Cameras")
         self.points_file = os.path.join(self.data_path, "Points_Sparse", f"{self.scene}_sparse.ply")
+        self.cluster_file = os.path.join(self.data_path, "Cameras/pair.txt")
+
+        self.H = int(self.scale * (self.cfg["camera"]["height"] - self.crop_h))
+        self.W = int(self.scale * (self.cfg["camera"]["width"]- self.crop_w))
 
     def get_cameras(self):
         cameras = []
@@ -40,10 +44,6 @@ class DTU(BaseDataset):
             camera[1,0,2] -= (self.crop_w//2)
             camera[1,1,2] -= (self.crop_h//2)
             camera[1] = scale_cam(camera[1], scale=self.scale)
-
-            if i==0:
-                self.H = int(self.scale * (self.cfg["camera"]["height"] - self.crop_h))
-                self.W = int(self.scale * (self.cfg["camera"]["width"]- self.crop_w))
 
             cameras.append(camera)
         return np.asarray(cameras, dtype=np.float32)
