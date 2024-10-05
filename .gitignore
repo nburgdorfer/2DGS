@@ -9,7 +9,6 @@ data
 **__pycache__**
 *.png
 *.out
-eval
 *.npz
 **/tmp
 **/.*.un~
