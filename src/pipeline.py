@@ -166,9 +166,9 @@ class Pipeline():
 
         # optimized gaussians file
         if self.cfg["rendering"]["iteration"] == -1:
-            gaussians_file = os.path.join(self.output_path, f"{self.scene}.ply")
+            gaussians_file = os.path.join(self.output_path, "gaussians.ply")
         else:
-            gaussians_file = os.path.join(self.ckpt_path, f"{self.scene}_{self.cfg['rendering']['iteration']:08d}.ply")
+            gaussians_file = os.path.join(self.ckpt_path, f"gaussians_{self.cfg['rendering']['iteration']:08d}.ply")
 
         # build 2DGS scene
         train_cameras, cameras_extent, gaussians = self.build_2dgs_scene(cameras, images, points, gaussians_file=gaussians_file, shuffle=False)
