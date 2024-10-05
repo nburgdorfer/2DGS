@@ -31,7 +31,7 @@ def getNerfppNorm(cam_info):
     cam_centers = []
 
     for cam in cam_info:
-        W2C = getWorld2View2(cam.R, cam.T)
+        W2C = getWorld2View2(cam["R"], cam["T"])
         C2W = np.linalg.inv(W2C)
         cam_centers.append(C2W[:3, 3:4])
 

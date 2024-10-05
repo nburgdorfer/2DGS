@@ -1,25 +1,14 @@
 # Python libraries
-import cv2
-import json
-import numpy as np
 import os
-import random
 from random import randint
-import shutil
+import random
 import sys
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import torch.optim.lr_scheduler as lr_sched
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-from typing import NamedTuple
+from torch.utils.tensorboard import SummaryWriter
 import open3d as o3d
+import mediapy as media
 
-from cvt.common import print_gpu_mem, to_gpu
 from cvt.io import write_pfm, load_ckpt, save_ckpt
 
 ## Custom libraries
@@ -27,13 +16,11 @@ from src.config import save_config
 from src.datasets.BaseDataset import build_dataset
 
 ### 2DGS dependencies
-from src.gaussian_renderer import render, network_gui
-from src.scene import GaussianModel, SceneInfo
-from src.utils.camera_utils import cameraList_from_camInfos, CameraInfo
+from src.gs_comps import *
+from src.scene.gaussian_model import GaussianModel
 from src.utils.graphics_utils import focal2fov, getNerfppNorm
 from src.utils.image_utils import psnr, render_net_image
 from src.utils.loss_utils import l1_loss, ssim
-from src.utils.mesh_utils import GaussianExtractor
 from src.utils.render_utils import generate_path, create_videos
 
 class Pipeline():
@@ -42,6 +29,8 @@ class Pipeline():
         self.device = self.cfg["device"]
         self.scene = scene
         self.iterations = cfg["optimization"]["iterations"]
+        self.near_depth = self.cfg["camera"]["near"]
+        self.far_depth = self.cfg["camera"]["far"]
 
         # set data paths
         self.data_path = os.path.join(self.cfg["data_path"], self.scene)
@@ -67,78 +56,104 @@ class Pipeline():
         os.makedirs(self.image_path, exist_ok=True)
         os.makedirs(self.video_path, exist_ok=True)
 
-        # create logger
         self.logger = SummaryWriter(log_dir=self.log_path)
-
-        # build all network components
         self.build_dataset()
-        #self.build_optimizer()
-        #self.build_scheduler()
-
-        # log current configuration used
         save_config(self.log_path, self.cfg)
-
-    def get_network(self):
-        raise NotImplementedError()
-
-    def compute_loss(self):
-        raise NotImplementedError()
-
-    def compute_stats(self):
-        raise NotImplementedError()
-
-    def save_output(self, data, output, ind):
-        with torch.set_grad_enabled((torch.is_grad_enabled and not torch.is_inference_mode_enabled)):
-            # save confidence map
-            pass
 
     def build_dataset(self):
         self.dataset = build_dataset(self.cfg, self.scene)
 
-    def build_optimizer(self):
-        rate = self.cfg["learning_rate"]
-        self.optimizer = optim.Adam(self.parameters_to_train, lr=rate, betas=(0.9, 0.999))
+    def save_output(self, output):
+        with torch.set_grad_enabled((torch.is_grad_enabled and not torch.is_inference_mode_enabled)):
+            for output_view in output:
+                idx = output_view["idx"]
+                rendered_image = output_view["rendered_image"]
+                cv2.imwrite(os.path.join(self.image_path, f"{idx:08d}.png"), rendered_image*255)
 
-    def build_scheduler(self):
-        lr_steps = [int(epoch_idx) for epoch_idx in self.cfg["training"]["lr_steps"].split(',')]
-        lr_gamma = float(self.cfg["training"]["lr_gamma"])
-        self.lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, lr_steps, gamma=lr_gamma)
+                depth = output_view["depth"]
+                write_pfm(os.path.join(self.depth_path, f"{idx:08d}.pfm"), depth)
+                cv2.imwrite(os.path.join(self.depth_path, f"{idx:08d}.png"), 255*(depth-depth.min()) / (depth.max()-depth.min()+1e-10))
+
+                normal = output_view["normal"]
+                write_pfm(os.path.join(self.normal_path, f"{idx:08d}.pfm"), normal)
+                cv2.imwrite(os.path.join(self.normal_path, f"{idx:08d}.png"), 255*(normal-normal.min()) / (normal.max()-normal.min()+1e-10))
+
+                depth_normal = output_view["depth_normal"]
+                write_pfm(os.path.join(self.depth_normal_path, f"{idx:08d}.pfm"), depth_normal)
+                cv2.imwrite(os.path.join(self.depth_normal_path, f"{idx:08d}.png"), 255*(depth_normal-depth_normal.min()) / (depth_normal.max()-depth_normal.min()+1e-10))
+
+                opacity = output_view["opacity"]
+                write_pfm(os.path.join(self.opacity_path, f"{idx:08d}.pfm"), opacity)
+                cv2.imwrite(os.path.join(self.opacity_path, f"{idx:08d}.png"), 255*(opacity-opacity.min()) / (opacity.max()-opacity.min()+1e-10))
+
+    def save_output_video(self, output):
+        """Creates videos out of the images saved to disk."""
+        frames = self.cfg["rendering"]["frames"]
+        zpad = max(5, len(str(frames - 1)))
+        idx_to_str = lambda idx: str(idx).zfill(zpad)
+        render_dist_curve_fn = np.log
+
+        video_kwargs = {
+            'shape': (self.dataset.H, self.dataset.W),
+            'codec': 'h264',
+            'fps': 60,
+            'crf': 18,
+        }
+      
+        for k in self.cfg["rendering"]["video_maps"]:
+            video_file = os.path.join(self.video_path, f'{k}.mp4')
+            input_format = "rgb" if (k=="rendered_image" or k=="normal") else "gray"
+            with media.VideoWriter(
+                video_file, **video_kwargs, input_format=input_format) as writer:
+                for output_view in tqdm(output, desc=f"Rendering {k} video"):
+                    idx = output_view["idx"]
+                    image = output_view[k]
+                    if k=="depth":
+                        image = (np.clip(image, self.near_depth, self.far_depth) - self.near_depth) / (self.far_depth-self.near_depth+1e-10)
+                    elif k=="rendered_image":
+                        image = image[:,:,::-1]
+                    frame = (np.clip(np.nan_to_num(image), 0., 1.) * 255.).astype(np.uint8)
+                    writer.add_image(frame)
 
     def build_2dgs_scene(self, cameras, images, pcd, gaussians_file=None, shuffle=True):
         cam_infos = []
         for i,camera in enumerate(cameras):
             height, width, _ = images[i].shape
-            cam_infos.append(CameraInfo(
-                                uid=1,
-                                R=camera[0,:3,:3].T,
-                                T=camera[0,:3,3],
-                                FovY=focal2fov(camera[1,1,1], height),
-                                FovX=focal2fov(camera[1,0,0], width),
-                                image=images[i],
-                                image_path=None,
-                                image_name=None,
-                                width=width,
-                                height=height))
+            info = {
+                "uid": 1,
+                "R": camera[0,:3,:3].T,
+                "T": camera[0,:3,3],
+                "FovY": focal2fov(camera[1,1,1], height),
+                "FovX": focal2fov(camera[1,0,0], width),
+                "image": images[i],
+                "image_path": None,
+                "image_name": None,
+                "width": width,
+                "height": height
+                }
+            cam_infos.append(info)
         nerf_normalization = getNerfppNorm(cam_infos)
 
-        scene_info = SceneInfo(point_cloud=pcd,
-                               train_cameras=cam_infos,
-                               test_cameras=[],
-                               nerf_normalization=nerf_normalization,
-                               ply_path=self.dataset.points_file)
-        with open(scene_info.ply_path, 'rb') as src_file, open(os.path.join(self.points_path, "input.ply") , 'wb') as dest_file:
+        scene_info = {
+                "point_cloud": pcd,
+                "train_cameras": cam_infos,
+                "test_cameras": [],
+                "nerf_normalization": nerf_normalization,
+                "ply_path": self.dataset.points_file
+                }
+        with open(scene_info["ply_path"], 'rb') as src_file, open(os.path.join(self.points_path, "input.ply") , 'wb') as dest_file:
             dest_file.write(src_file.read())
 
-        camlist = scene_info.train_cameras
+        camlist = scene_info["train_cameras"]
 
         if shuffle:
-            random.shuffle(scene_info.train_cameras)  # Multi-res consistent random shuffling
-        cameras_extent = scene_info.nerf_normalization["radius"]
-        train_cameras = cameraList_from_camInfos(scene_info.train_cameras, self.cfg)
+            random.shuffle(scene_info["train_cameras"])  # Multi-res consistent random shuffling
+        cameras_extent = scene_info["nerf_normalization"]["radius"]
+        train_cameras = cameraList_from_camInfos(scene_info["train_cameras"], self.cfg)
 
         gaussians = GaussianModel(self.cfg["model"]["sh_degree"])
         if gaussians_file==None:
-            gaussians.create_from_pcd(scene_info.point_cloud, cameras_extent)
+            gaussians.create_from_pcd(scene_info["point_cloud"], cameras_extent)
         else:
             gaussians.load_ply(gaussians_file)
 
@@ -167,15 +182,16 @@ class Pipeline():
         # load gaussian extractor
         gaussExtractor = GaussianExtractor(self.cfg, gaussians, render, bg_color=bg_color)    
 
-        print("export training images ...")
+        # export training images
         gaussExtractor.reconstruction(train_cameras)
-        gaussExtractor.export_image(self.output_path)
+        output = gaussExtractor.export_image()
+        self.save_output(output)
         
-        print("render videos ...")
-        cam_traj = generate_path(train_cameras)
+        # render videos
+        cam_traj = generate_path(train_cameras, self.cfg["rendering"]["frames"])
         gaussExtractor.reconstruction(cam_traj)
-        gaussExtractor.export_image(self.video_path)
-        create_videos(base_dir=self.video_path, input_dir=self.video_path)
+        output = gaussExtractor.export_image()
+        self.save_output_video(output)
 
         #if args.render_mesh:
         #    print("export mesh ...")
@@ -309,26 +325,26 @@ class Pipeline():
                     torch.save((gaussians.capture(), iteration), os.path.join(self.ckpt_path, f"{iteration}.pt"))
                     gaussians.save_ply(os.path.join(self.points_path, f"{self.scene}_{iteration:08d}.ply"))
 
-            with torch.no_grad():
-                if network_gui.conn == None:
-                    network_gui.try_connect(self.cfg["rendering"]["maps"])
-                while network_gui.conn != None:
-                    try:
-                        net_image_bytes = None
-                        custom_cam, do_training, keep_alive, scaling_modifer, render_mode = network_gui.receive()
-                        if custom_cam != None:
-                            render_pkg = render(self.cfg, custom_cam, gaussians, background, scaling_modifer)   
-                            net_image = render_net_image(render_pkg, self.cfg["rendering"]["maps"], render_mode, custom_cam)
-                            net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
-                        metrics_dict = {
-                            "#": gaussians.get_opacity.shape[0],
-                            "loss": ema_loss_for_log
-                            # Add more metrics as needed
-                        }
-                        # Send the data
-                        network_gui.send(net_image_bytes, self.data_path, metrics_dict)
-                        if do_training and ((iteration < int(self.iterations)) or not keep_alive):
-                            break
-                    except Exception as e:
-                        # raise e
-                        network_gui.conn = None
+            #with torch.no_grad():
+            #    if network_gui.conn == None:
+            #        network_gui.try_connect(self.cfg["rendering"]["maps"])
+            #    while network_gui.conn != None:
+            #        try:
+            #            net_image_bytes = None
+            #            custom_cam, do_training, keep_alive, scaling_modifer, render_mode = network_gui.receive()
+            #            if custom_cam != None:
+            #                render_pkg = render(self.cfg, custom_cam, gaussians, background, scaling_modifer)   
+            #                net_image = render_net_image(render_pkg, self.cfg["rendering"]["maps"], render_mode, custom_cam)
+            #                net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
+            #            metrics_dict = {
+            #                "#": gaussians.get_opacity.shape[0],
+            #                "loss": ema_loss_for_log
+            #                # Add more metrics as needed
+            #            }
+            #            # Send the data
+            #            network_gui.send(net_image_bytes, self.data_path, metrics_dict)
+            #            if do_training and ((iteration < int(self.iterations)) or not keep_alive):
+            #                break
+            #        except Exception as e:
+            #            # raise e
+            #            network_gui.conn = None

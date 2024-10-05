@@ -202,7 +202,7 @@ def load_img(pth: str) -> np.ndarray:
   return image
 
 
-def create_videos(base_dir, input_dir, num_frames=480):
+def create_videos(base_dir, input_dir, num_frames):
     """Creates videos out of the images saved to disk."""
     # Last two parts of checkpoint path are experiment name and scene name.
     near_depth = 425
@@ -221,7 +221,6 @@ def create_videos(base_dir, input_dir, num_frames=480):
     p = 3
     distance_limits = np.percentile(depth_frame.flatten(), [p, 100 - p])
     lo, hi = [render_dist_curve_fn(x) for x in distance_limits]
-    print(f'Video shape is {shape[:2]}')
 
     video_kwargs = {
         'shape': shape[:2],
@@ -235,10 +234,9 @@ def create_videos(base_dir, input_dir, num_frames=480):
         input_format = "rgb" if (k=="rendered_image" or k=="normal") else "gray"
         file_suffix = "png" if k=="rendered_image" else "pfm"
 
-        print(f'Making video {video_file}...')
         with media.VideoWriter(
             video_file, **video_kwargs, input_format=input_format) as writer:
-            for idx in tqdm(range(num_frames)):
+            for idx in tqdm(range(num_frames), desc=f"Rendering {k} video"):
                 img_file = os.path.join(input_dir, f"{k}", f"{idx:08d}.{file_suffix}")
                 if k=="rendered_image":
                     img = cv2.imread(img_file)[:,:,::-1]
@@ -251,15 +249,15 @@ def create_videos(base_dir, input_dir, num_frames=480):
                 frame = (np.clip(np.nan_to_num(img), 0., 1.) * 255.).astype(np.uint8)
                 writer.add_image(frame)
 
-def save_img_u8(img, pth):
-  """Save an image (probably RGB) in [0, 1] to disk as a uint8 PNG."""
-  with open(pth, 'wb') as f:
-    Image.fromarray(
-        (np.clip(np.nan_to_num(img), 0., 1.) * 255.).astype(np.uint8)).save(
-            f, 'PNG')
-
-
-def save_img_f32(depthmap, pth):
-  """Save an image (probably a depthmap) to disk as a float32 TIFF."""
-  with open(pth, 'wb') as f:
-    Image.fromarray(np.nan_to_num(depthmap).astype(np.float32)).save(f, 'TIFF')
+#def save_img_u8(img, pth):
+#  """Save an image (probably RGB) in [0, 1] to disk as a uint8 PNG."""
+#  with open(pth, 'wb') as f:
+#    Image.fromarray(
+#        (np.clip(np.nan_to_num(img), 0., 1.) * 255.).astype(np.uint8)).save(
+#            f, 'PNG')
+#
+#
+#def save_img_f32(depthmap, pth):
+#  """Save an image (probably a depthmap) to disk as a float32 TIFF."""
+#  with open(pth, 'wb') as f:
+#    Image.fromarray(np.nan_to_num(depthmap).astype(np.float32)).save(f, 'TIFF')

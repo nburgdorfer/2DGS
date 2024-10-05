@@ -34,7 +34,7 @@ optimization:
   densify_grad_threshold: 0.0002
   densify_until_iter: 15000
   feature_lr: 0.0025
-  iterations: 30000
+  iterations: 300
   percent_dense: 0.01
   position_lr_delay_mult: 0.01
   position_lr_final: 0.0000016
@@ -47,8 +47,10 @@ optimization:
   scaling_lr: 0.005
 
 rendering:
+  frames: 360
   iteration: -1 # gaussian model iteration to load
   maps: ['RGB', 'Alpha', 'Normal', 'Depth', 'Edge', 'Curvature']
+  video_maps: ["rendered_image", "normal", "depth", "opacity"]
 
 visualization:
   ip: "127.0.0.1"
