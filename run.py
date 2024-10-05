@@ -7,8 +7,8 @@ from cvt.visualization.util import print_csv, to_normal
 
 from src.pipeline import Pipeline
 from src.config import load_config, load_scenes, get_argparser
-from src.eval.eval_2d import eval_2d
-from src.eval.eval_3d import dtu_point_eval
+from src.evaluation.eval_2d import eval_2d
+from src.evaluation.eval_3d import dtu_point_eval
 from src.tools.consensus_filtering import consensus_filter
 
 parser = get_argparser()
