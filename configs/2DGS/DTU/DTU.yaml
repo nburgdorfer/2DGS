@@ -14,7 +14,7 @@ camera:
   crop_w: 0
 
 inference:
-  scale: 0.25
+  scale: 1.0
 
 loss:
   dist_iter: 3000
@@ -34,7 +34,7 @@ optimization:
   densify_grad_threshold: 0.0002
   densify_until_iter: 15000
   feature_lr: 0.0025
-  iterations: 300
+  iterations: 30000
   percent_dense: 0.01
   position_lr_delay_mult: 0.01
   position_lr_final: 0.0000016
@@ -47,8 +47,6 @@ optimization:
   scaling_lr: 0.005
 
 point_cloud:
-  image_region_th: 2
-  depth_region_th: 2
   pix_th: 0.40
   prob_th: 0.80
   num_consistent: 3
