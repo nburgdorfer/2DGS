@@ -1,4 +1,4 @@
-data_path: /mnt/Data/DTU/ #/home/nate/data/DTU/
+data_path: /home/nate/data/DTU/
 points_path: #/mnt/Drive1/Results/DTU/MVSNet/Points
 output_path: /mnt/Drive1/Results/DTU/2DGS/
 device: cuda:0
