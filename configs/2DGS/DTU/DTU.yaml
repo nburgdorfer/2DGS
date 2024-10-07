@@ -1,6 +1,7 @@
 data_path: /home/nate/data/DTU/
-points_path: #/mnt/Drive1/Results/DTU/MVSNet/Points
-output_path: /mnt/Drive1/Results/DTU/2DGS/
+output_path: /mnt/Drive1/Results/DTU/2DGS_dense/
+points_path: /mnt/Drive1/Results/DTU/NP_CVP_MVSNet/Points
+voxel_size: 0.1
 device: cuda:0
 seed: 43
 num_workers: 4

@@ -24,7 +24,10 @@ class DTU(BaseDataset):
         self.image_path = os.path.join(self.data_path, "Images", self.scene)
         self.depth_path = os.path.join(self.data_path, "Depths", self.scene)
         self.camera_path = os.path.join(self.data_path, "Cameras")
-        self.points_file = os.path.join(self.data_path, "Points_Sparse", f"{self.scene}_sparse.ply")
+        if self.cfg["points_path"]:
+            self.points_file = os.path.join(self.cfg["points_path"], f"{self.scene}.ply")
+        else:
+            self.points_file = os.path.join(self.data_path, "Points_Sparse", f"{self.scene}_sparse.ply")
         self.cluster_file = os.path.join(self.data_path, "Cameras/pair.txt")
 
         self.H = int(self.scale * (self.cfg["camera"]["height"] - self.crop_h))
@@ -70,7 +73,8 @@ class DTU(BaseDataset):
 
     def get_points(self):
         cloud = o3d.io.read_point_cloud(self.points_file)
-        #cloud = cloud.voxel_down_sample(voxel_size=self.voxel_size)
+        if self.cfg["voxel_size"]:
+            cloud = cloud.voxel_down_sample(voxel_size=self.cfg["voxel_size"])
         positions = np.asarray(cloud.points).astype(np.float32)
         colors = np.asarray(cloud.colors).astype(np.float32)
         if (len(cloud.normals) == 0):
