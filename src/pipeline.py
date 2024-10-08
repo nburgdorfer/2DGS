@@ -134,9 +134,13 @@ class Pipeline():
                 "train_cameras": cam_infos,
                 "test_cameras": [],
                 "nerf_normalization": nerf_normalization,
-                "ply_path": self.dataset.points_file
+                "ply_path": self.dataset.points_file,
+                "sparse_ply_path": self.dataset.sparse_points_file
                 }
-        with open(scene_info["ply_path"], 'rb') as src_file, open(os.path.join(self.output_path, "input.ply") , 'wb') as dest_file:
+        with open(scene_info["ply_path"], 'rb') as src_file, open(os.path.join(self.output_path, "initial_points.ply") , 'wb') as dest_file:
+            dest_file.write(src_file.read())
+        # sparse points produced to be friendly to the SIBR viewer (too slow with dense points)
+        with open(scene_info["sparse_ply_path"], 'rb') as src_file, open(os.path.join(self.output_path, "input.ply") , 'wb') as dest_file:
             dest_file.write(src_file.read())
 
         camlist = scene_info["train_cameras"]
@@ -281,17 +285,17 @@ class Pipeline():
                     gaussians.save_ply(os.path.join(self.output_path, f"gaussians.ply"))
 
                 ## Densification
-                #if iteration < self.cfg["optimization"]["densify_until_iter"]:
-                #    gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
-                #    gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
+                if iteration < self.cfg["optimization"]["densify_until_iter"]:
+                    gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
+                    gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
 
-                #    if iteration > self.cfg["optimization"]["densify_from_iter"] and iteration % self.cfg["optimization"]["densification_interval"] == 0:
-                #        size_threshold = 20 if iteration > self.cfg["optimization"]["opacity_reset_interval"] else None
-                #        gaussians.densify_and_prune(self.cfg["optimization"]["densify_grad_threshold"], self.cfg["optimization"]["opacity_th"], cameras_extent, size_threshold)
-                #    
-                #    if iteration % self.cfg["optimization"]["opacity_reset_interval"] == 0 or \
-                #        (self.cfg["model"]["white_background"] and iteration == self.cfg["optimization"]["densify_from_iter"]):
-                #        gaussians.reset_opacity()
+                    if iteration > self.cfg["optimization"]["densify_from_iter"] and iteration % self.cfg["optimization"]["densification_interval"] == 0:
+                        size_threshold = 20 if iteration > self.cfg["optimization"]["opacity_reset_interval"] else None
+                        gaussians.densify_and_prune(self.cfg["optimization"]["densify_grad_threshold"], self.cfg["optimization"]["opacity_th"], cameras_extent, size_threshold)
+                    
+                    if iteration % self.cfg["optimization"]["opacity_reset_interval"] == 0 or \
+                        (self.cfg["model"]["white_background"] and iteration == self.cfg["optimization"]["densify_from_iter"]):
+                        gaussians.reset_opacity()
 
                 # Optimizer step
                 if iteration < self.iterations:
