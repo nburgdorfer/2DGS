@@ -1,4 +1,5 @@
 import torch
+import sys
 import numpy as np
 from torch import nn
 import os
@@ -121,17 +122,28 @@ class GaussianModel:
 
         dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(pcd["points"])).float().cuda()), 0.0000001)
         scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 2)
-        rots = torch.rand((fused_point_cloud.shape[0], 4), device=self.device)
 
-        opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
-        #opacities = self.inverse_opacity_activation(1.0 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
+        normals = torch.from_numpy
+        rand_axis = torch.rand((fused_point_cloud.shape[0], 3), device=self.device)
+        print(rand_axis.shape)
+        print(pcd["normals"].shape)
+        print(rand_axis[0])
+        print(pcd["normals"][0])
+        axis_1 = torch.cross(rand_axis, pcd["normals"])
+        print(axis_1.shape)
+        sys.exit()
+
+        #opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
+        opacities = self.inverse_opacity_activation(1.0 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
 
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
-        self._scaling = nn.Parameter(scales.requires_grad_(True))
+        #self._scaling = nn.Parameter(scales.requires_grad_(True))
+        self._scaling = nn.Parameter(scales.requires_grad_(False))
         self._rotation = nn.Parameter(rots.requires_grad_(True))
-        self._opacity = nn.Parameter(opacities.requires_grad_(True))
+        #self._opacity = nn.Parameter(opacities.requires_grad_(True))
+        self._opacity = nn.Parameter(opacities.requires_grad_(False))
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device=self.device)
 
     def training_setup(self, cfg):
@@ -143,8 +155,8 @@ class GaussianModel:
             {'params': [self._xyz], 'lr': cfg["optimization"]["position_lr_init"] * self.spatial_lr_scale, "name": "xyz"},
             {'params': [self._features_dc], 'lr': cfg["optimization"]["feature_lr"], "name": "f_dc"},
             {'params': [self._features_rest], 'lr': cfg["optimization"]["feature_lr"] / 20.0, "name": "f_rest"},
-            {'params': [self._opacity], 'lr': cfg["optimization"]["opacity_lr"], "name": "opacity"},
-            {'params': [self._scaling], 'lr': cfg["optimization"]["scaling_lr"], "name": "scaling"},
+            #{'params': [self._opacity], 'lr': cfg["optimization"]["opacity_lr"], "name": "opacity"},
+            #{'params': [self._scaling], 'lr': cfg["optimization"]["scaling_lr"], "name": "scaling"},
             {'params': [self._rotation], 'lr': cfg["optimization"]["rotation_lr"], "name": "rotation"}
         ]
 
