@@ -2,9 +2,11 @@ import torch
 import sys
 import numpy as np
 from torch import nn
+import torch.nn.functional as F
 import os
 from plyfile import PlyData, PlyElement
 from simple_knn._C import distCUDA2
+from scipy.spatial.transform import Rotation as R
 
 from src.gs_comps.utils import RGB2SH
 from src.utils.general_utils import inverse_sigmoid, get_expon_lr_func, build_rotation
@@ -123,15 +125,13 @@ class GaussianModel:
         dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(pcd["points"])).float().cuda()), 0.0000001)
         scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 2)
 
-        normals = torch.from_numpy
+        # initialize rotation as function of point cloud normal
+        normals = F.normalize(torch.from_numpy(pcd["normals"]).to(self.device), dim=1)
         rand_axis = torch.rand((fused_point_cloud.shape[0], 3), device=self.device)
-        print(rand_axis.shape)
-        print(pcd["normals"].shape)
-        print(rand_axis[0])
-        print(pcd["normals"][0])
-        axis_1 = torch.cross(rand_axis, pcd["normals"])
-        print(axis_1.shape)
-        sys.exit()
+        axis_1 = F.normalize(torch.cross(rand_axis, normals), dim=1)
+        axis_2 = F.normalize(torch.cross(normals, axis_1), dim=1)
+        rots = torch.stack([normals,axis_1,axis_2], dim=-1)
+        rots = torch.from_numpy(R.from_matrix(rots.detach().cpu().numpy()).as_quat()).to(self.device)
 
         #opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
         opacities = self.inverse_opacity_activation(1.0 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
