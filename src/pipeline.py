@@ -16,12 +16,9 @@ from src.config import save_config
 from src.datasets.BaseDataset import build_dataset
 
 ### 2DGS dependencies
-from src.gs_comps import *
+from src.gs_comps.utils import *
 from src.scene.gaussian_model import GaussianModel
-from src.utils.graphics_utils import focal2fov, getNerfppNorm
-from src.utils.image_utils import psnr, render_net_image
-from src.utils.loss_utils import l1_loss, ssim
-from src.utils.render_utils import generate_path, create_videos
+from src.gs_comps import network_gui
 
 class Pipeline():
     def __init__(self, cfg, config_path, scene):
@@ -143,13 +140,19 @@ class Pipeline():
             dest_file.write(src_file.read())
 
         camlist = scene_info["train_cameras"]
+        # store cameras as json
+        json_cams = []
+        for id, cam in enumerate(camlist):
+            json_cams.append(camera_to_JSON(id, cam))
+        with open(os.path.join(self.output_path, "cameras.json"), 'w') as file:
+            json.dump(json_cams, file)
 
         if shuffle:
             random.shuffle(scene_info["train_cameras"])  # Multi-res consistent random shuffling
         cameras_extent = scene_info["nerf_normalization"]["radius"]
         train_cameras = cameraList_from_camInfos(scene_info["train_cameras"], self.cfg)
 
-        gaussians = GaussianModel(self.cfg["model"]["sh_degree"])
+        gaussians = GaussianModel(self.cfg["model"]["sh_degree"], self.cfg["device"])
         if gaussians_file==None:
             gaussians.create_from_pcd(scene_info["point_cloud"], cameras_extent)
         else:
@@ -278,17 +281,17 @@ class Pipeline():
                     gaussians.save_ply(os.path.join(self.output_path, f"gaussians.ply"))
 
                 # Densification
-                #if iteration < self.cfg["optimization"]["densify_until_iter"]:
-                #    gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
-                #    gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
+                if iteration < self.cfg["optimization"]["densify_until_iter"]:
+                    gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
+                    gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
 
-                #    if iteration > self.cfg["optimization"]["densify_from_iter"] and iteration % self.cfg["optimization"]["densification_interval"] == 0:
-                #        size_threshold = 20 if iteration > self.cfg["optimization"]["opacity_reset_interval"] else None
-                #        gaussians.densify_and_prune(self.cfg["optimization"]["densify_grad_threshold"], self.cfg["optimization"]["opacity_th"], cameras_extent, size_threshold)
-                #    
-                #    if iteration % self.cfg["optimization"]["opacity_reset_interval"] == 0 or \
-                #        (self.cfg["model"]["white_background"] and iteration == self.cfg["optimization"]["densify_from_iter"]):
-                #        gaussians.reset_opacity()
+                    if iteration > self.cfg["optimization"]["densify_from_iter"] and iteration % self.cfg["optimization"]["densification_interval"] == 0:
+                        size_threshold = 20 if iteration > self.cfg["optimization"]["opacity_reset_interval"] else None
+                        gaussians.densify_and_prune(self.cfg["optimization"]["densify_grad_threshold"], self.cfg["optimization"]["opacity_th"], cameras_extent, size_threshold)
+                    
+                    if iteration % self.cfg["optimization"]["opacity_reset_interval"] == 0 or \
+                        (self.cfg["model"]["white_background"] and iteration == self.cfg["optimization"]["densify_from_iter"]):
+                        gaussians.reset_opacity()
 
                 # Optimizer step
                 if iteration < self.iterations:
@@ -299,26 +302,26 @@ class Pipeline():
                     torch.save((gaussians.capture(), iteration), os.path.join(self.ckpt_path, f"{iteration}.pt"))
                     gaussians.save_ply(os.path.join(self.ckpt_path, f"gaussians_{iteration:08d}.ply"))
 
-            #with torch.no_grad():
-            #    if network_gui.conn == None:
-            #        network_gui.try_connect(self.cfg["rendering"]["maps"])
-            #    while network_gui.conn != None:
-            #        try:
-            #            net_image_bytes = None
-            #            custom_cam, do_training, keep_alive, scaling_modifer, render_mode = network_gui.receive()
-            #            if custom_cam != None:
-            #                render_pkg = render(self.cfg, custom_cam, gaussians, background, scaling_modifer)   
-            #                net_image = render_net_image(render_pkg, self.cfg["rendering"]["maps"], render_mode, custom_cam)
-            #                net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
-            #            metrics_dict = {
-            #                "#": gaussians.get_opacity.shape[0],
-            #                "loss": ema_loss_for_log
-            #                # Add more metrics as needed
-            #            }
-            #            # Send the data
-            #            network_gui.send(net_image_bytes, self.data_path, metrics_dict)
-            #            if do_training and ((iteration < int(self.iterations)) or not keep_alive):
-            #                break
-            #        except Exception as e:
-            #            # raise e
-            #            network_gui.conn = None
+            with torch.no_grad():
+                if network_gui.conn == None:
+                    network_gui.try_connect(self.cfg["rendering"]["maps"])
+                while network_gui.conn != None:
+                    try:
+                        net_image_bytes = None
+                        custom_cam, do_training, keep_alive, scaling_modifer, render_mode = network_gui.receive()
+                        if custom_cam != None:
+                            render_pkg = render(self.cfg, custom_cam, gaussians, background, scaling_modifer)   
+                            net_image = render_net_image(render_pkg, self.cfg["rendering"]["maps"], render_mode, custom_cam)
+                            net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
+                        metrics_dict = {
+                            "#": gaussians.get_opacity.shape[0],
+                            "loss": ema_loss_for_log
+                            # Add more metrics as needed
+                        }
+                        # Send the data
+                        network_gui.send(net_image_bytes, self.output_path, metrics_dict)
+                        if do_training and ((iteration < int(self.iterations)) or not keep_alive):
+                            break
+                    except Exception as e:
+                        # raise e
+                        network_gui.conn = None

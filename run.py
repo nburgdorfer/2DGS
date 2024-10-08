@@ -11,6 +11,8 @@ from src.evaluation.eval_2d import eval_2d
 from src.evaluation.eval_3d import dtu_point_eval
 from src.tools.consensus_filtering import consensus_filter
 
+from src.gs_comps import network_gui
+
 parser = get_argparser()
 ARGS = parser.parse_args()
 
@@ -20,7 +22,7 @@ cfg["dataset"] = ARGS.dataset
 set_random_seed(cfg["seed"])
 
 #### Start GUI server ####
-#network_gui.init(cfg["visualization"]["ip"], cfg["visualization"]["port"])
+network_gui.init(cfg["visualization"]["ip"], cfg["visualization"]["port"])
 
 #### Load Scenes ####
 scene_dict = load_scenes(os.path.join(ARGS.config_path, "scenes", "inference.yaml"))
@@ -38,7 +40,7 @@ for i, scene in enumerate(scene_dict["scenes"]):
     pipeline.run()
     pipeline.render()
 
-    ####### 2D EVALUATION ####
+    ######## 2D EVALUATION ####
     print("\n---Evaluating depth maps---")
     mae, auc, percentages = eval_2d(pipeline.depth_path, pipeline.opacity_path, pipeline.dataset)
     avg_mae[i] = mae

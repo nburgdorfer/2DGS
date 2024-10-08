@@ -1,14 +1,3 @@
-#
-# Copyright (C) 2023, Inria
-# GRAPHDECO research group, https://team.inria.fr/graphdeco
-# All rights reserved.
-#
-# This software is free for non-commercial, research and evaluation use 
-# under the terms of the LICENSE.md file.
-#
-# For inquiries contact  george.drettakis@inria.fr
-#
-
 import torch
 import numpy as np
 from torch import nn
@@ -16,14 +5,11 @@ import os
 from plyfile import PlyData, PlyElement
 from simple_knn._C import distCUDA2
 
-from src.utils.sh_utils import RGB2SH
+from src.gs_comps.utils import RGB2SH
 from src.utils.general_utils import inverse_sigmoid, get_expon_lr_func, build_rotation
-from src.utils.system_utils import mkdir_p
-from src.utils.graphics_utils import BasicPointCloud
-from src.utils.general_utils import strip_symmetric, build_scaling_rotation
+from src.utils.general_utils import build_scaling_rotation
 
 class GaussianModel:
-
     def setup_functions(self):
         def build_covariance_from_scaling_rotation(center, scaling, scaling_modifier, rotation):
             RS = build_scaling_rotation(torch.cat([scaling * scaling_modifier, torch.ones_like(scaling)], dim=-1), rotation).permute(0,2,1)
@@ -42,7 +28,7 @@ class GaussianModel:
         self.rotation_activation = torch.nn.functional.normalize
 
 
-    def __init__(self, sh_degree : int):
+    def __init__(self, sh_degree, device):
         self.active_sh_degree = 0
         self.max_sh_degree = sh_degree  
         self._xyz = torch.empty(0)
@@ -57,6 +43,7 @@ class GaussianModel:
         self.optimizer = None
         self.percent_dense = 0
         self.spatial_lr_scale = 0
+        self.device = device
         self.setup_functions()
 
     def capture(self):
@@ -122,30 +109,30 @@ class GaussianModel:
         if self.active_sh_degree < self.max_sh_degree:
             self.active_sh_degree += 1
 
-    def create_from_pcd(self, pcd : BasicPointCloud, spatial_lr_scale : float):
+    def create_from_pcd(self, pcd, spatial_lr_scale):
         self.spatial_lr_scale = spatial_lr_scale
-        fused_point_cloud = torch.tensor(np.asarray(pcd.points)).float().cuda()
-        fused_color = RGB2SH(torch.tensor(np.asarray(pcd.colors)).float().cuda())
+        fused_point_cloud = torch.tensor(np.asarray(pcd["points"])).float().cuda()
+        fused_color = RGB2SH(torch.tensor(np.asarray(pcd["colors"])).float().cuda())
         features = torch.zeros((fused_color.shape[0], 3, (self.max_sh_degree + 1) ** 2)).float().cuda()
         features[:, :3, 0 ] = fused_color
         features[:, 3:, 1:] = 0.0
 
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
-        dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(pcd.points)).float().cuda()), 0.0000001)
+        dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(pcd["points"])).float().cuda()), 0.0000001)
         scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 2)
-        rots = torch.rand((fused_point_cloud.shape[0], 4), device="cuda")
+        rots = torch.rand((fused_point_cloud.shape[0], 4), device=self.device)
 
-        #opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
-        opacities = self.inverse_opacity_activation(1.0 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
+        opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
+        #opacities = self.inverse_opacity_activation(1.0 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
 
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
         self._scaling = nn.Parameter(scales.requires_grad_(True))
         self._rotation = nn.Parameter(rots.requires_grad_(True))
-        self._opacity = nn.Parameter(opacities.requires_grad_(False))
-        self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
+        self._opacity = nn.Parameter(opacities.requires_grad_(True))
+        self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device=self.device)
 
     def training_setup(self, cfg):
         self.percent_dense = cfg["optimization"]["percent_dense"]
@@ -156,7 +143,7 @@ class GaussianModel:
             {'params': [self._xyz], 'lr': cfg["optimization"]["position_lr_init"] * self.spatial_lr_scale, "name": "xyz"},
             {'params': [self._features_dc], 'lr': cfg["optimization"]["feature_lr"], "name": "f_dc"},
             {'params': [self._features_rest], 'lr': cfg["optimization"]["feature_lr"] / 20.0, "name": "f_rest"},
-            #{'params': [self._opacity], 'lr': cfg["optimization"]["opacity_lr"], "name": "opacity"},
+            {'params': [self._opacity], 'lr': cfg["optimization"]["opacity_lr"], "name": "opacity"},
             {'params': [self._scaling], 'lr': cfg["optimization"]["scaling_lr"], "name": "scaling"},
             {'params': [self._rotation], 'lr': cfg["optimization"]["rotation_lr"], "name": "rotation"}
         ]
@@ -190,8 +177,6 @@ class GaussianModel:
         return l
 
     def save_ply(self, path):
-        mkdir_p(os.path.dirname(path))
-
         xyz = self._xyz.detach().cpu().numpy()
         normals = np.zeros_like(xyz)
         f_dc = self._features_dc.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()

@@ -172,28 +172,6 @@ def generate_ellipse_path(poses: np.ndarray,
   return np.stack([viewmatrix(p - center, up, p) for p in positions])
 
 
-def generate_path(viewpoint_cameras, n_frames=480):
-  c2ws = np.array([np.linalg.inv(np.asarray((cam.world_view_transform.T).cpu().numpy())) for cam in viewpoint_cameras])
-  pose = c2ws[:,:3,:] @ np.diag([1, -1, -1, 1])
-  pose_recenter, colmap_to_world_transform = transform_poses_pca(pose)
-
-  # generate new poses
-  new_poses = generate_ellipse_path(poses=pose_recenter, n_frames=n_frames)
-  # warp back to orignal scale
-  new_poses = np.linalg.inv(colmap_to_world_transform) @ pad_poses(new_poses)
-
-  traj = []
-  for c2w in new_poses:
-      c2w = c2w @ np.diag([1, -1, -1, 1])
-      cam = copy.deepcopy(viewpoint_cameras[0])
-      cam.image_height = int(cam.image_height / 2) * 2
-      cam.image_width = int(cam.image_width / 2) * 2
-      cam.world_view_transform = torch.from_numpy(np.linalg.inv(c2w).T).float().cuda()
-      cam.full_proj_transform = (cam.world_view_transform.unsqueeze(0).bmm(cam.projection_matrix.unsqueeze(0))).squeeze(0)
-      cam.camera_center = cam.world_view_transform.inverse()[3, :3]
-      traj.append(cam)
-
-  return traj
 
 def load_img(pth: str) -> np.ndarray:
   """Load an image and cast to float32."""
@@ -202,52 +180,6 @@ def load_img(pth: str) -> np.ndarray:
   return image
 
 
-def create_videos(base_dir, input_dir, num_frames):
-    """Creates videos out of the images saved to disk."""
-    # Last two parts of checkpoint path are experiment name and scene name.
-    near_depth = 425
-    far_depth = 937
-
-    zpad = max(5, len(str(num_frames - 1)))
-    idx_to_str = lambda idx: str(idx).zfill(zpad)
-
-    os.makedirs(base_dir, exist_ok=True)
-    render_dist_curve_fn = np.log
-
-    # Load one example frame to get image shape and depth range.
-    depth_file = os.path.join(input_dir, 'depth', f'{0:08d}.pfm')
-    depth_frame = read_pfm(depth_file)
-    shape = depth_frame.shape
-    p = 3
-    distance_limits = np.percentile(depth_frame.flatten(), [p, 100 - p])
-    lo, hi = [render_dist_curve_fn(x) for x in distance_limits]
-
-    video_kwargs = {
-        'shape': shape[:2],
-        'codec': 'h264',
-        'fps': 60,
-        'crf': 18,
-    }
-  
-    for k in ["rendered_image", "normal", "depth", "opacity"]:
-        video_file = os.path.join(base_dir, f'{k}.mp4')
-        input_format = "rgb" if (k=="rendered_image" or k=="normal") else "gray"
-        file_suffix = "png" if k=="rendered_image" else "pfm"
-
-        with media.VideoWriter(
-            video_file, **video_kwargs, input_format=input_format) as writer:
-            for idx in tqdm(range(num_frames), desc=f"Rendering {k} video"):
-                img_file = os.path.join(input_dir, f"{k}", f"{idx:08d}.{file_suffix}")
-                if k=="rendered_image":
-                    img = cv2.imread(img_file)[:,:,::-1]
-                    img = img / 255.
-                else:
-                    img = read_pfm(img_file)
-                    if k=="depth":
-                        img = (np.clip(img, near_depth, far_depth) - near_depth) / (far_depth-near_depth)
-
-                frame = (np.clip(np.nan_to_num(img), 0., 1.) * 255.).astype(np.uint8)
-                writer.add_image(frame)
 
 #def save_img_u8(img, pth):
 #  """Save an image (probably RGB) in [0, 1] to disk as a uint8 PNG."""

@@ -14,7 +14,6 @@ from cvt.camera import scale_cam
 from cvt.io import read_single_cam_sfm, read_pfm
 
 from src.datasets.BaseDataset import BaseDataset
-from src.scene.gaussian_model import BasicPointCloud
 
 class DTU(BaseDataset):
     def __init__(self, cfg, scene):
@@ -80,7 +79,8 @@ class DTU(BaseDataset):
         if (len(cloud.normals) == 0):
             cloud.estimate_normals()
         normals = np.asarray(cloud.normals).astype(np.float32)
-        return BasicPointCloud(points=positions, colors=colors, normals=normals)
+
+        return {"points": positions, "colors": colors, "normals": normals}
 
     def _get_image(self, image_file):
         image = cv2.imread(image_file)
@@ -92,7 +92,7 @@ class DTU(BaseDataset):
         image = cv2.resize(image, (self.W,self.H), interpolation=cv2.INTER_LINEAR)
         image = _normalize_image(image)
         #image = np.moveaxis(image, [0,1,2], [1,2,0]) # [3 x H x W]
-        image = image[:,:,::-1] # [H x W x 3] [RGB]
+        #image = image[:,:,::-1] # [H x W x 3] [RGB]
         return image.astype(np.float32)
 
     def _get_depth(self, depth_file):

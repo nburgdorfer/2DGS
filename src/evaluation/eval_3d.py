@@ -238,6 +238,7 @@ def dtu_point_eval(cfg, scan, method):
 
     # read in point clouds
     est_ply_filename = f"{scan}.ply"
+    #est_ply_filename = f"gaussians.ply"
     est_ply_path = os.path.join(output_path, scan, est_ply_filename)
     est_ply = read_point_cloud(est_ply_path)
     est_ply = downsample_cloud(est_ply, min_point_dist)
