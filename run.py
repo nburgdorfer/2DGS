@@ -22,7 +22,7 @@ cfg["dataset"] = ARGS.dataset
 set_random_seed(cfg["seed"])
 
 #### Start GUI server ####
-#network_gui.init(cfg["visualization"]["ip"], cfg["visualization"]["port"])
+network_gui.init(cfg["visualization"]["ip"], cfg["visualization"]["port"])
 
 #### Load Scenes ####
 scene_dict = load_scenes(os.path.join(ARGS.config_path, "scenes", "inference.yaml"))

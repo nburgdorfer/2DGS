@@ -8,9 +8,7 @@ from plyfile import PlyData, PlyElement
 from simple_knn._C import distCUDA2
 from scipy.spatial.transform import Rotation as R
 
-from src.gs_comps.utils import RGB2SH
-from src.utils.general_utils import inverse_sigmoid, get_expon_lr_func, build_rotation
-from src.utils.general_utils import build_scaling_rotation
+from src.gs_comps.utils import RGB2SH, inverse_sigmoid, get_expon_lr_func, build_rotation, build_scaling_rotation
 
 class GaussianModel:
     def setup_functions(self):
@@ -131,7 +129,7 @@ class GaussianModel:
         axis_1 = F.normalize(torch.cross(rand_axis, normals), dim=1)
         axis_2 = F.normalize(torch.cross(normals, axis_1), dim=1)
         rots = torch.stack([normals,axis_1,axis_2], dim=-1)
-        rots = torch.from_numpy(R.from_matrix(rots.detach().cpu().numpy()).as_quat()).to(self.device)
+        rots = torch.from_numpy(R.from_matrix(rots.detach().cpu().numpy()).as_quat()).to(torch.float32).to(self.device)
 
         #opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
         opacities = self.inverse_opacity_activation(1.0 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
