@@ -925,8 +925,8 @@ class GaussianExtractor(object):
         for idx, viewpoint_cam in enumerate(self.viewpoint_stack):
             output_view = {
                     "idx": idx,
-                    "rendered_image": self.rgbmaps[idx].permute(1,2,0).cpu().numpy(),
-                    "image": viewpoint_cam.original_image[0:3].permute(1,2,0).cpu().numpy(),
+                    "rendered_image": self.rgbmaps[idx].permute(1,2,0).cpu().numpy()[:,:,::-1],
+                    "image": viewpoint_cam.original_image[0:3].permute(1,2,0).cpu().numpy()[:,:,::-1],
                     "depth": self.depthmaps[idx][0].cpu().numpy(),
                     "normal": self.normals[idx].permute(1,2,0).cpu().numpy() * 0.5 + 0.5,
                     "depth_normal": self.depth_normals[idx].permute(1,2,0).cpu().numpy() * 0.5 + 0.5,
