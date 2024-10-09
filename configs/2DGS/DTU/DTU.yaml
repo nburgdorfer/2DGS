@@ -42,10 +42,10 @@ optimization:
   position_lr_init: 0.00016
   position_lr_max_steps: 1000 #30000
   opacity_lr: 0.05
-  opacity_reset_interval: 300 #3000
+  opacity_reset_interval: 3000
   opacity_th: 0.05
   rotation_lr: 0.001
-  scaling_lr: 0.005
+  scaling_lr: 0.0 #0.005
 
 point_cloud:
   pix_th: 0.40
