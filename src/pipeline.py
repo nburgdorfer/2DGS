@@ -44,6 +44,7 @@ class Pipeline():
         # create directories
         os.makedirs(self.output_path, exist_ok=True)
         os.makedirs(self.ckpt_path, exist_ok=True)
+        os.makedirs(self.log_path, exist_ok=True)
         os.makedirs(self.depth_path, exist_ok=True)
         os.makedirs(self.normal_path, exist_ok=True)
         os.makedirs(self.depth_normal_path, exist_ok=True)

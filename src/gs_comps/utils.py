@@ -493,9 +493,10 @@ def render(cfg, viewpoint_camera, pc, bg_color, scaling_modifier = 1.0, override
     means3D = pc.get_xyz
     means2D = screenspace_points
     opacity = pc.get_opacity
-    mean_gradient = means3D.grad
-    if not mean_gradient:
-        mean_gradient = torch.zeros_like(means3D)
+    with torch.no_grad():
+        mean_gradient = means3D.grad
+        if not mean_gradient:
+            mean_gradient = torch.zeros_like(means3D)
     print(mean_gradient)
     print(mean_gradient.shape)
 
