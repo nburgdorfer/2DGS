@@ -45,7 +45,7 @@ optimization:
   opacity_reset_interval: 300 #3000
   opacity_th: 0.05
   rotation_lr: 0.001
-  scaling_lr: 0.0 #0.005
+  scaling_lr: 0.005
 
 point_cloud:
   pix_th: 0.40
