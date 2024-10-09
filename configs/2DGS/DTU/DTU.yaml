@@ -1,7 +1,7 @@
 data_path: /home/nate/data/DTU/
 output_path: /mnt/Drive1/Results/DTU/2DGS_2/
-points_path: #/mnt/Drive1/Results/DTU/NP_CVP_MVSNet/Points
-voxel_size: #0.3
+points_path: /mnt/Drive1/Results/DTU/NP_CVP_MVSNet/Points
+voxel_size: 0.3
 device: cuda:0
 seed: 43
 num_workers: 4
@@ -29,20 +29,20 @@ model:
   white_background: False
 
 optimization:
-  ckpt_freq: 1000 #10000
-  densification_interval: 100 #100
-  densify_from_iter: 0 #500
+  ckpt_freq: 10000
+  densification_interval: 100
+  densify_from_iter: 500
   densify_grad_threshold: 0.0002
-  densify_until_iter: 500 #15000
+  densify_until_iter: 15000
   feature_lr: 0.0025
-  iterations: 1000 #30000
+  iterations: 30000
   percent_dense: 0.01
   position_lr_delay_mult: 0.01
   position_lr_final: 0.0000016
   position_lr_init: 0.00016
-  position_lr_max_steps: 1000 #30000
+  position_lr_max_steps: 30000
   opacity_lr: 0.05
-  opacity_reset_interval: 500 #3000
+  opacity_reset_interval: 3000
   opacity_th: 0.05
   rotation_lr: 0.001
   scaling_lr: 0.005

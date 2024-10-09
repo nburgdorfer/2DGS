@@ -262,10 +262,6 @@ class Pipeline():
             # loss
             total_loss = loss + dist_loss + normal_loss
             total_loss.backward()
-            print(viewpoint_cam.image_name)
-            print(viewpoint_cam.camera_center)
-            print(viewpoint_cam.world_view_transform)
-            sys.exit()
             iter_end.record()
 
             with torch.no_grad():

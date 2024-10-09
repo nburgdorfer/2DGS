@@ -131,8 +131,7 @@ class GaussianModel:
         rots = torch.stack([axis_1,axis_2,normals], dim=-1)
         rots = torch.from_numpy(R.from_matrix(rots.detach().cpu().numpy()).as_quat()).to(torch.float32).to(self.device)
 
-        #opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
-        opacities = self.inverse_opacity_activation(0.50 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
+        opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
 
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
