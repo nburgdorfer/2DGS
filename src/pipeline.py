@@ -274,7 +274,7 @@ class Pipeline():
             iter_end.record()
 
             # visualize
-            if iteration % 10 == 0:
+            if iteration % 1000 == 0:
                 mean_grad = torch.clone(gaussians.get_xyz.grad)
                 mean_grad = (mean_grad - mean_grad.min(dim=0,keepdim=True)[0]) / (mean_grad.max(dim=0,keepdim=True)[0] - mean_grad.min(dim=0,keepdim=True)[0]+1e-10)
                 with torch.no_grad():
