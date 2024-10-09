@@ -44,6 +44,7 @@ class DTU(BaseDataset):
                 print("ERROR: invalid camera extrinsics matrix '{camera_file}': {camera[0]}")
                 sys.exit()
 
+            camera[0] = np.linalg.inv(camera[0])
             camera[1,0,2] -= (self.crop_w//2)
             camera[1,1,2] -= (self.crop_h//2)
             camera[1] = scale_cam(camera[1], scale=self.scale)
