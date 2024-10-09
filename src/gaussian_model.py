@@ -124,7 +124,7 @@ class GaussianModel:
 
         dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(pcd["points"])).float().cuda()), 0.0000001)
         #scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 2)
-        scales = torch.ones_like(dist2)[...,None].repeat(1, 2) * self.cfg["voxel_size"] * 0.5
+        scales = torch.ones_like(dist2)[...,None].repeat(1, 2) * self.cfg["voxel_size"] * 0.35
 
         # initialize rotation as function of point cloud normal
         normals = F.normalize(torch.from_numpy(pcd["normals"]).to(self.device), dim=1)
