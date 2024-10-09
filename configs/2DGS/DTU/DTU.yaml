@@ -41,9 +41,9 @@ optimization:
   position_lr_final: 0.0000005 #0.0000016
   position_lr_init: 0.00005 #0.00016
   position_lr_max_steps: 1000 #30000
-  opacity_lr: 0.05
+  opacity_lr: 0.1 #0.05
   opacity_reset_interval: 500 #3000
-  opacity_th: 0.35
+  opacity_th: 0.20 #0.05
   rotation_lr: 0.001
   scaling_lr: 0.0 #0.005
 
