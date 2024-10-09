@@ -1,7 +1,7 @@
 data_path: /home/nate/data/DTU/
 output_path: /mnt/Drive1/Results/DTU/2DGS_2/
 points_path: /mnt/Drive1/Results/DTU/NP_CVP_MVSNet/Points
-voxel_size: 1.0
+voxel_size: 0.3
 device: cuda:0
 seed: 43
 num_workers: 4
@@ -39,7 +39,7 @@ optimization:
   percent_dense: 0.01
   position_lr_delay_mult: 0.01
   position_lr_final: 0.0000003 #0.0000016
-  position_lr_init: 0.00003 #0.00016
+  position_lr_init: 0.0003 #0.00016
   position_lr_max_steps: 1000 #30000
   opacity_lr: 0.08 #0.05
   opacity_reset_interval: 500 #3000

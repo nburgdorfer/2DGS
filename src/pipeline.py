@@ -120,6 +120,10 @@ class Pipeline():
                 "T": camera[0,:3,3],
                 "FovY": focal2fov(camera[1,1,1], height),
                 "FovX": focal2fov(camera[1,0,0], width),
+                "focal_x": camera[1,0,0],
+                "focal_y": camera[1,1,1],
+                "cx": camera[1,0,2],
+                "cy": camera[1,1,2],
                 "image": images[i],
                 "image_path": None,
                 "image_name": f"{i:08d}",
@@ -153,7 +157,8 @@ class Pipeline():
 
         if shuffle:
             random.shuffle(scene_info["train_cameras"])  # Multi-res consistent random shuffling
-        cameras_extent = scene_info["nerf_normalization"]["radius"]
+        #cameras_extent = scene_info["nerf_normalization"]["radius"]
+        cameras_extent = 1.0
         train_cameras = cameraList_from_camInfos(scene_info["train_cameras"], self.cfg)
 
         gaussians = GaussianModel(self.cfg, self.cfg["model"]["sh_degree"])
@@ -306,6 +311,15 @@ class Pipeline():
                 if ((iteration % self.cfg["optimization"]["ckpt_freq"] == 0 and self.cfg["optimization"]["ckpt_freq"] != -1) or (iteration == self.iterations)):
                     torch.save((gaussians.capture(), iteration), os.path.join(self.ckpt_path, f"{iteration}.pt"))
                     gaussians.save_ply(os.path.join(self.ckpt_path, f"gaussians_{iteration:08d}.ply"))
+
+
+            with torch.no_grad():
+                vc = train_cameras[0]
+                print(vc.image_name)
+                render_pkg = render(self.cfg, vc, gaussians, background)
+                image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
+                rendered_image = torch.movedim(image,(0,1,2),(2,0,1)).detach().cpu().numpy()[:,:,::-1]
+                cv2.imwrite(os.path.join("test_renders", f"{iteration:08d}.png"), rendered_image*255)
 
             with torch.no_grad():
                 if network_gui.conn == None:
