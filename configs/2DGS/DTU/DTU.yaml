@@ -30,7 +30,7 @@ model:
 
 optimization:
   ckpt_freq: 1000 #10000
-  densification_interval: 10 #100
+  densification_interval: 50 #100
   densify_from_iter: 0 #500
   densify_grad_threshold: 0.0002
   densify_until_iter: 750 #15000
@@ -42,7 +42,7 @@ optimization:
   position_lr_init: 0.00016
   position_lr_max_steps: 1000 #30000
   opacity_lr: 0.05
-  opacity_reset_interval: 3000
+  opacity_reset_interval: 500 #3000
   opacity_th: 0.05
   rotation_lr: 0.001
   scaling_lr: 0.0 #0.005

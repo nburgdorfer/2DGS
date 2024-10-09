@@ -84,7 +84,8 @@ class GaussianModel:
 
     @property
     def get_scaling(self):
-        return self.scaling_activation(self._scaling) #.clamp(max=1)
+        #return self.scaling_activation(self._scaling) #.clamp(max=1)
+        return self._scaling
     
     @property
     def get_rotation(self):
@@ -123,7 +124,7 @@ class GaussianModel:
 
         dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(pcd["points"])).float().cuda()), 0.0000001)
         #scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 2)
-        scales = torch.ones_like(dist2)[...,None].repeat(1, 2) * torch.log(torch.sqrt(dist2)).min()
+        scales = torch.ones_like(dist2)[...,None].repeat(1, 2) * dist2.min()
 
         # initialize rotation as function of point cloud normal
         normals = F.normalize(torch.from_numpy(pcd["normals"]).to(self.device), dim=1)
@@ -357,7 +358,8 @@ class GaussianModel:
         samples = torch.normal(mean=means, std=stds)
         rots = build_rotation(self._rotation[selected_pts_mask]).repeat(N,1,1)
         new_xyz = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.get_xyz[selected_pts_mask].repeat(N, 1)
-        new_scaling = self.scaling_inverse_activation(self.get_scaling[selected_pts_mask].repeat(N,1) / (0.8*N))
+        #new_scaling = self.scaling_inverse_activation(self.get_scaling[selected_pts_mask].repeat(N,1) / (0.8*N))
+        new_scaling = self.get_scaling[selected_pts_mask].repeat(N,1)
         new_rotation = self._rotation[selected_pts_mask].repeat(N,1)
         new_features_dc = self._features_dc[selected_pts_mask].repeat(N,1,1)
         new_features_rest = self._features_rest[selected_pts_mask].repeat(N,1,1)
@@ -388,7 +390,7 @@ class GaussianModel:
         grads[grads.isnan()] = 0.0
 
         self.densify_and_clone(grads, max_grad, extent)
-        #self.densify_and_split(grads, max_grad, extent)
+        self.densify_and_split(grads, max_grad, extent)
 
         prune_mask = (self.get_opacity < min_opacity).squeeze()
         if max_screen_size:
