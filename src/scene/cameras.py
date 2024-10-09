@@ -13,6 +13,7 @@ import torch
 from torch import nn
 import numpy as np
 import math
+import sys
 
 def getWorld2View2(R, t, translate=np.array([.0, .0, .0]), scale=1.0):
     Rt = np.zeros((4, 4))

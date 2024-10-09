@@ -122,7 +122,7 @@ class Pipeline():
                 "FovX": focal2fov(camera[1,0,0], width),
                 "image": images[i],
                 "image_path": None,
-                "image_name": None,
+                "image_name": f"{i:08d}",
                 "width": width,
                 "height": height
                 }
@@ -262,6 +262,10 @@ class Pipeline():
             # loss
             total_loss = loss + dist_loss + normal_loss
             total_loss.backward()
+            print(viewpoint_cam.image_name)
+            print(viewpoint_cam.camera_center)
+            print(viewpoint_cam.world_view_transform)
+            sys.exit()
             iter_end.record()
 
             with torch.no_grad():

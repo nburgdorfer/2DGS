@@ -229,7 +229,20 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
 	  debug);
   }
 
-  return std::make_tuple(dL_dmeans2D, dL_dcolors, dL_dopacity, dL_dmeans3D, dL_dtransMat, dL_dsh, dL_dscales, dL_drotations);
+  // Compute camera ray to gaussian means
+  torch::Tensor view_ray = (means3D - campos);
+  view_ray = view_ray / torch::linalg_vector_norm(view_ray,2,1).unsqueeze(1);
+  torch::Tensor dL_dmeans3D_ray = view_ray * torch::matmul(view_ray.unsqueeze(1), dL_dmeans3D.unsqueeze(2)).squeeze(2);
+
+  //std::cout << "--------Camera Center--------" << std::endl << campos << std::endl;
+  //std::cout << "--------Means--------" << std::endl << means3D.index({0}) << std::endl;
+  //std::cout << "--------View Ray--------" << std::endl << view_ray.index({0}) << std::endl;
+  //std::cout << "--------View Ray Norm--------" << std::endl << view_ray.index({0}) << std::endl;
+  //std::cout << "--------Means gradients--------" << std::endl << dL_dmeans3D.index({0}) << std::endl;
+  //std::cout << "--------Means gradients along ray--------" << std::endl << dL_dmeans3D_ray.index({0}) << std::endl;
+
+  //return std::make_tuple(dL_dmeans2D, dL_dcolors, dL_dopacity, dL_dmeans3D, dL_dtransMat, dL_dsh, dL_dscales, dL_drotations);
+  return std::make_tuple(dL_dmeans2D, dL_dcolors, dL_dopacity, dL_dmeans3D_ray, dL_dtransMat, dL_dsh, dL_dscales, dL_drotations);
 }
 
 torch::Tensor markVisible(
