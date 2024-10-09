@@ -312,15 +312,6 @@ class Pipeline():
                     torch.save((gaussians.capture(), iteration), os.path.join(self.ckpt_path, f"{iteration}.pt"))
                     gaussians.save_ply(os.path.join(self.ckpt_path, f"gaussians_{iteration:08d}.ply"))
 
-
-            with torch.no_grad():
-                vc = train_cameras[0]
-                print(vc.image_name)
-                render_pkg = render(self.cfg, vc, gaussians, background)
-                image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
-                rendered_image = torch.movedim(image,(0,1,2),(2,0,1)).detach().cpu().numpy()[:,:,::-1]
-                cv2.imwrite(os.path.join("test_renders", f"{iteration:08d}.png"), rendered_image*255)
-
             with torch.no_grad():
                 if network_gui.conn == None:
                     network_gui.try_connect(self.cfg["rendering"]["maps"])
