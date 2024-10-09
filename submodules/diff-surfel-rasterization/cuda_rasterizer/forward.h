@@ -57,6 +57,7 @@ namespace FORWARD
 		int W, int H,
 		float focal_x, float focal_y,
 		const float2* points_xy_image,
+		const float* gradient_features,
 		const float* features,
 		const float* transMats,
 		const float* depths,
@@ -64,6 +65,7 @@ namespace FORWARD
 		float* final_T,
 		uint32_t* n_contrib,
 		const float* bg_color,
+		float* out_gradient,
 		float* out_color,
 		float* out_others);
 }

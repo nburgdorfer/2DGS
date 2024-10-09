@@ -154,8 +154,8 @@ void CudaRasterizer::Rasterizer::markVisible(
 
 CudaRasterizer::GeometryState CudaRasterizer::GeometryState::fromChunk(char*& chunk, size_t P)
 {
-	GeometryState geom;
-	obtain(chunk, geom.depths, P, 128);
+    GeometryState geom;
+    obtain(chunk, geom.depths, P, 128);
 	obtain(chunk, geom.clamped, P * 3, 128);
 	obtain(chunk, geom.internal_radii, P, 128);
 	obtain(chunk, geom.means2D, P, 128);
@@ -204,6 +204,7 @@ int CudaRasterizer::Rasterizer::forward(
 	const int width, int height,
 	const float* means3D,
 	const float* shs,
+	const float* gradient,
 	const float* colors_precomp,
 	const float* opacities,
 	const float* scales,
@@ -215,6 +216,7 @@ int CudaRasterizer::Rasterizer::forward(
 	const float* cam_pos,
 	const float tan_fovx, float tan_fovy,
 	const bool prefiltered,
+	float* out_gradient,
 	float* out_color,
 	float* out_others,
 	int* radii,
@@ -319,6 +321,7 @@ int CudaRasterizer::Rasterizer::forward(
 	CHECK_CUDA(, debug)
 
 	// Let each tile blend its range of Gaussians independently in parallel
+	const float* gradient_ptr = gradient;
 	const float* feature_ptr = colors_precomp != nullptr ? colors_precomp : geomState.rgb;
 	const float* transMat_ptr = transMat_precomp != nullptr ? transMat_precomp : geomState.transMat;
 	CHECK_CUDA(FORWARD::render(
@@ -328,6 +331,7 @@ int CudaRasterizer::Rasterizer::forward(
 		width, height,
 		focal_x, focal_y,
 		geomState.means2D,
+		gradient_ptr,
 		feature_ptr,
 		transMat_ptr,
 		geomState.depths,
@@ -335,6 +339,7 @@ int CudaRasterizer::Rasterizer::forward(
 		imgState.accum_alpha,
 		imgState.n_contrib,
 		background,
+        out_gradient,
 		out_color,
 		out_others), debug)
 

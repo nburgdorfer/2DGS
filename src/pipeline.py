@@ -5,7 +5,6 @@ import random
 import sys
 import torch
 from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
 import open3d as o3d
 import mediapy as media
 
@@ -40,6 +39,7 @@ class Pipeline():
         self.opacity_path = os.path.join(self.output_path, "opacity")
         self.image_path = os.path.join(self.output_path, "image")
         self.video_path = os.path.join(self.output_path, "video")
+        self.vis_path = os.path.join(self.output_path, "visuals")
 
         # create directories
         os.makedirs(self.output_path, exist_ok=True)
@@ -50,8 +50,8 @@ class Pipeline():
         os.makedirs(self.opacity_path, exist_ok=True)
         os.makedirs(self.image_path, exist_ok=True)
         os.makedirs(self.video_path, exist_ok=True)
+        os.makedirs(self.vis_path, exist_ok=True)
 
-        self.logger = SummaryWriter(log_dir=self.log_path)
         self.build_dataset()
         save_config(self.log_path, self.cfg)
 
@@ -170,7 +170,7 @@ class Pipeline():
 
         return train_cameras, cameras_extent, gaussians
 
-    def render(self):
+    def render_outputs(self):
         # load data
         cameras = self.dataset.get_cameras()
         images = self.dataset.get_images()
@@ -233,6 +233,9 @@ class Pipeline():
             iter_start.record()
             gaussians.update_learning_rate(iteration)
 
+            # store start gaussian means
+            previous_means = gaussians.get_xyz
+
             # Every 1000 iterations we increase the levels of SH up to a maximum degree
             if iteration % self.cfg["optimization"]["sh_increase_interval"] == 0:
                 gaussians.oneupSHdegree()
@@ -249,7 +252,6 @@ class Pipeline():
             Ll1 = l1_loss(image, gt_image)
             loss = (1.0 - self.cfg["loss"]["dssim_weight"]) * Ll1 + self.cfg["loss"]["dssim_weight"] * (1.0 - ssim(image, gt_image))
             
-
             rend_dist = render_pkg["rend_dist"]
             rend_normal  = render_pkg['rend_normal']
             surf_normal = render_pkg['surf_normal']
@@ -312,26 +314,40 @@ class Pipeline():
                     torch.save((gaussians.capture(), iteration), os.path.join(self.ckpt_path, f"{iteration}.pt"))
                     gaussians.save_ply(os.path.join(self.ckpt_path, f"gaussians_{iteration:08d}.ply"))
 
+
             with torch.no_grad():
-                if network_gui.conn == None:
-                    network_gui.try_connect(self.cfg["rendering"]["maps"])
-                while network_gui.conn != None:
-                    try:
-                        net_image_bytes = None
-                        custom_cam, do_training, keep_alive, scaling_modifer, render_mode = network_gui.receive()
-                        if custom_cam != None:
-                            render_pkg = render(self.cfg, custom_cam, gaussians, background, scaling_modifer)   
-                            net_image = render_net_image(render_pkg, self.cfg["rendering"]["maps"], render_mode, custom_cam)
-                            net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
-                        metrics_dict = {
-                            "#": gaussians.get_opacity.shape[0],
-                            "loss": ema_loss_for_log
-                            # Add more metrics as needed
-                        }
-                        # Send the data
-                        network_gui.send(net_image_bytes, self.output_path, metrics_dict)
-                        if do_training and ((iteration < int(self.iterations)) or not keep_alive):
-                            break
-                    except Exception as e:
-                        # raise e
-                        network_gui.conn = None
+                cam = None
+                for vc in train_cameras:
+                    if vc.image_name == f"{25:08d}":
+                        cam=vc
+                if not cam:
+                    cam = train_cameras[0]
+                image, gradient = render_pkg["render"], render_pkg["gradient"]
+                rendered_image = torch.movedim(image,(0,1,2),(2,0,1)).detach().cpu().numpy()[:,:,::-1]
+                cv2.imwrite(os.path.join(self.vis_path, f"image_{iteration:08d}.png"), rendered_image*255)
+                rendered_gradient = torch.movedim(gradient,(0,1,2),(2,0,1)).detach().cpu().numpy()[:,:,::-1]
+                cv2.imwrite(os.path.join(self.vis_path, f"grad_{iteration:08d}.png"), rendered_gradient*255)
+
+        with torch.no_grad():
+            if network_gui.conn == None:
+                network_gui.try_connect(self.cfg["rendering"]["maps"])
+            while network_gui.conn != None:
+                try:
+                    net_image_bytes = None
+                    custom_cam, do_training, keep_alive, scaling_modifer, render_mode = network_gui.receive()
+                    if custom_cam != None:
+                        render_pkg = render(self.cfg, custom_cam, gaussians, background, scaling_modifer)   
+                        net_image = render_net_image(render_pkg, self.cfg["rendering"]["maps"], render_mode, custom_cam)
+                        net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
+                    metrics_dict = {
+                        "#": gaussians.get_opacity.shape[0],
+                        "loss": ema_loss_for_log
+                        # Add more metrics as needed
+                    }
+                    # Send the data
+                    network_gui.send(net_image_bytes, self.output_path, metrics_dict)
+                    if do_training and ((iteration < int(self.iterations)) or not keep_alive):
+                        break
+                except Exception as e:
+                    # raise e
+                    network_gui.conn = None

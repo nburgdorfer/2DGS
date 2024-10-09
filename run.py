@@ -38,7 +38,7 @@ for i, scene in enumerate(scene_dict["scenes"]):
     print(f"\n----Running 2DGS on {cfg['dataset']} - {scene}----")
     pipeline = Pipeline(cfg=cfg, config_path=ARGS.config_path, scene=scene)
     pipeline.run()
-    pipeline.render()
+    pipeline.render_outputs()
 
     ######## 2D EVALUATION ####
     print("\n---Evaluating depth maps---")
@@ -49,8 +49,8 @@ for i, scene in enumerate(scene_dict["scenes"]):
 
     #### 3D EVALUATION ####
     print("\n---Evaluating point cloud---")
-    consensus_filter(cfg, pipeline.depth_path, pipeline.opacity_path, pipeline.image_path, pipeline.output_path, pipeline.dataset, scene)
-    to_normal(os.path.join(pipeline.output_path, f"{scene}.ply"), os.path.join(pipeline.output_path, f"{scene}_normal.ply"))
+    #consensus_filter(cfg, pipeline.depth_path, pipeline.opacity_path, pipeline.image_path, pipeline.output_path, pipeline.dataset, scene)
+    #to_normal(os.path.join(pipeline.output_path, f"{scene}.ply"), os.path.join(pipeline.output_path, f"{scene}_normal.ply"))
     acc, comp, prec, rec, fscore = dtu_point_eval(cfg, scene, method=ARGS.model)
     avg_acc[i] = acc
     avg_comp[i] = comp

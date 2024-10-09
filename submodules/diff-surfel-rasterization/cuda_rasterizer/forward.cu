@@ -261,6 +261,7 @@ renderCUDA(
 	int W, int H,
 	float focal_x, float focal_y,
 	const float2* __restrict__ points_xy_image,
+	const float* __restrict__ gradient_features,
 	const float* __restrict__ features,
 	const float* __restrict__ transMats,
 	const float* __restrict__ depths,
@@ -268,6 +269,7 @@ renderCUDA(
 	float* __restrict__ final_T,
 	uint32_t* __restrict__ n_contrib,
 	const float* __restrict__ bg_color,
+	float* __restrict__ out_gradient,
 	float* __restrict__ out_color,
 	float* __restrict__ out_others)
 {
@@ -303,7 +305,7 @@ renderCUDA(
 	uint32_t contributor = 0;
 	uint32_t last_contributor = 0;
 	float C[CHANNELS] = { 0 };
-
+	float GD[3] = {0};
 
 #if RENDER_AXUTILITY
 	// render axutility ouput
@@ -404,7 +406,11 @@ renderCUDA(
 			}
 			// Render normal map
 			for (int ch=0; ch<3; ch++) N[ch] += normal[ch] * w;
+
 #endif
+
+            // Render Gradient map
+			for (int ch=0; ch<3; ch++) GD[ch] += gradient_features[ch] * w;
 
 			// Eq. (3) from 3D Gaussian splatting paper.
 			for (int ch = 0; ch < CHANNELS; ch++)
@@ -425,6 +431,8 @@ renderCUDA(
 		n_contrib[pix_id] = last_contributor;
 		for (int ch = 0; ch < CHANNELS; ch++)
 			out_color[ch * H * W + pix_id] = C[ch] + T * bg_color[ch];
+
+		for (int ch=0; ch<3; ch++) out_gradient[pix_id + ch * H * W] = GD[ch];
 
 #if RENDER_AXUTILITY
 		n_contrib[pix_id + H * W] = median_contributor;
@@ -447,6 +455,7 @@ void FORWARD::render(
 	int W, int H,
 	float focal_x, float focal_y,
 	const float2* means2D,
+	const float* gradient,
 	const float* colors,
 	const float* transMats,
 	const float* depths,
@@ -454,6 +463,7 @@ void FORWARD::render(
 	float* final_T,
 	uint32_t* n_contrib,
 	const float* bg_color,
+	float* out_gradient,
 	float* out_color,
 	float* out_others)
 {
@@ -463,6 +473,7 @@ void FORWARD::render(
 		W, H,
 		focal_x, focal_y,
 		means2D,
+		gradient,
 		colors,
 		transMats,
 		depths,
@@ -470,6 +481,7 @@ void FORWARD::render(
 		final_T,
 		n_contrib,
 		bg_color,
+		out_gradient,
 		out_color,
 		out_others);
 }
