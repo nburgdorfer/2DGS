@@ -162,6 +162,7 @@ class Pipeline():
         else:
             gaussians.load_ply(gaussians_file)
 
+
         return train_cameras, cameras_extent, gaussians
 
     def render(self):
