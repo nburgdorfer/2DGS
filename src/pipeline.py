@@ -229,7 +229,7 @@ class Pipeline():
             gaussians.update_learning_rate(iteration)
 
             # Every 1000 iterations we increase the levels of SH up to a maximum degree
-            if iteration % 1000 == 0:
+            if iteration % self.cfg["optimization"]["sh_increase_interval"] == 0:
                 gaussians.oneupSHdegree()
 
             # Pick a random Camera

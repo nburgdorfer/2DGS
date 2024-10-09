@@ -32,8 +32,8 @@ optimization:
   ckpt_freq: 1000 #10000
   densification_interval: 50 #100
   densify_from_iter: 0 #500
-  densify_grad_threshold: 0.000005 #0.0002
-  densify_until_iter: 750 #15000
+  densify_grad_threshold: 0.00001 #0.0002
+  densify_until_iter: 900 #15000
   feature_lr: 0.0025
   iterations: 1000 #30000
   percent_dense: 0.01
@@ -44,8 +44,9 @@ optimization:
   opacity_lr: 0.08 #0.05
   opacity_reset_interval: 500 #3000
   opacity_th: 0.20 #0.05
-  rotation_lr: 0.0005 #0.001
+  rotation_lr: 0.001
   scaling_lr: 0.0 #0.005
+  sh_increase_interval: 100 #1000
 
 point_cloud:
   pix_th: 0.40
