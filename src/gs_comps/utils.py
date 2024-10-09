@@ -455,7 +455,7 @@ def marching_cubes_with_contraction(
     
     return combined
 
-def render(cfg, viewpoint_camera, pc, bg_color, scaling_modifier = 1.0, override_color = None):
+def render(cfg, viewpoint_camera, pc, bg_color, gradient=None, scaling_modifier = 1.0, override_color = None):
     """
     Render the scene. 
     
@@ -494,11 +494,8 @@ def render(cfg, viewpoint_camera, pc, bg_color, scaling_modifier = 1.0, override
     means2D = screenspace_points
     opacity = pc.get_opacity
     with torch.no_grad():
-        mean_gradient = means3D.grad
-        if not mean_gradient:
-            mean_gradient = torch.zeros_like(means3D)
-    print(mean_gradient)
-    print(mean_gradient.shape)
+        if gradient == None:
+            gradient = torch.zeros_like(means3D)
 
     scales = None
     rotations = None
@@ -518,7 +515,7 @@ def render(cfg, viewpoint_camera, pc, bg_color, scaling_modifier = 1.0, override
         means3D = means3D,
         means2D = means2D,
         shs = shs,
-        gradient = mean_gradient,
+        gradient = gradient,
         colors_precomp = colors_precomp,
         opacities = opacity,
         scales = scales,

@@ -273,6 +273,23 @@ class Pipeline():
             total_loss.backward()
             iter_end.record()
 
+            # visualize
+            if iteration % 10 == 0:
+                mean_grad = torch.clone(gaussians.get_xyz.grad)
+                mean_grad = (mean_grad - mean_grad.min(dim=0,keepdim=True)[0]) / (mean_grad.max(dim=0,keepdim=True)[0] - mean_grad.min(dim=0,keepdim=True)[0]+1e-10)
+                with torch.no_grad():
+                    cam = None
+                    for vc in train_cameras:
+                        if vc.image_name == f"{25:08d}":
+                            cam=vc
+                    render_pkg = render(self.cfg, cam, gaussians, background, mean_grad)
+                    image, gradient = render_pkg["render"], render_pkg["gradient"]
+                    rendered_image = torch.movedim(image,(0,1,2),(2,0,1)).detach().cpu().numpy()[:,:,::-1]
+                    cv2.imwrite(os.path.join(self.vis_path, f"image_{iteration:08d}.png"), rendered_image*255)
+                    rg = torch.movedim(gradient,(0,1,2),(2,0,1)).detach().cpu().numpy()[:,:,::-1]
+                    cv2.imwrite(os.path.join(self.vis_path, f"grad_{iteration:08d}.png"), rg*255)
+
+
             with torch.no_grad():
                 # Progress bar
                 ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
@@ -314,20 +331,6 @@ class Pipeline():
                 if ((iteration % self.cfg["optimization"]["ckpt_freq"] == 0 and self.cfg["optimization"]["ckpt_freq"] != -1) or (iteration == self.iterations)):
                     torch.save((gaussians.capture(), iteration), os.path.join(self.ckpt_path, f"{iteration}.pt"))
                     gaussians.save_ply(os.path.join(self.ckpt_path, f"gaussians_{iteration:08d}.ply"))
-
-
-            with torch.no_grad():
-                cam = None
-                for vc in train_cameras:
-                    if vc.image_name == f"{25:08d}":
-                        cam=vc
-                if not cam:
-                    cam = train_cameras[0]
-                image, gradient = render_pkg["render"], render_pkg["gradient"]
-                rendered_image = torch.movedim(image,(0,1,2),(2,0,1)).detach().cpu().numpy()[:,:,::-1]
-                cv2.imwrite(os.path.join(self.vis_path, f"image_{iteration:08d}.png"), rendered_image*255)
-                rendered_gradient = torch.movedim(gradient,(0,1,2),(2,0,1)).detach().cpu().numpy()[:,:,::-1]
-                cv2.imwrite(os.path.join(self.vis_path, f"grad_{iteration:08d}.png"), rendered_gradient*255)
 
         with torch.no_grad():
             if network_gui.conn == None:
