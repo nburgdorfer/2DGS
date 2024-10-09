@@ -156,7 +156,7 @@ class Pipeline():
         cameras_extent = scene_info["nerf_normalization"]["radius"]
         train_cameras = cameraList_from_camInfos(scene_info["train_cameras"], self.cfg)
 
-        gaussians = GaussianModel(self.cfg["model"]["sh_degree"], self.cfg["device"])
+        gaussians = GaussianModel(self.cfg, self.cfg["model"]["sh_degree"])
         if gaussians_file==None:
             gaussians.create_from_pcd(scene_info["point_cloud"], cameras_extent)
         else:
