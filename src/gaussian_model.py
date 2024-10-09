@@ -123,7 +123,7 @@ class GaussianModel:
 
         dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(pcd["points"])).float().cuda()), 0.0000001)
         #scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 2)
-        scales = torch.ones_like(dist2)[...,None].repeat(1, 2) * self.cfg["voxel_size"] * 0.01
+        scales = torch.ones_like(dist2)[...,None].repeat(1, 2) * self.cfg["voxel_size"] * 1e-10
 
         # initialize rotation as function of point cloud normal
         normals = F.normalize(torch.from_numpy(pcd["normals"]).to(self.device), dim=1)
@@ -139,7 +139,7 @@ class GaussianModel:
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
-        self._scaling = nn.Parameter(scales.requires_grad_(True))
+        self._scaling = nn.Parameter(scales.requires_grad_(False))
         self._rotation = nn.Parameter(rots.requires_grad_(True))
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device=self.device)
@@ -387,8 +387,8 @@ class GaussianModel:
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
 
-        self.densify_and_clone(grads, max_grad, extent)
-        self.densify_and_split(grads, max_grad, extent)
+        #self.densify_and_clone(grads, max_grad, extent)
+        #self.densify_and_split(grads, max_grad, extent)
 
         prune_mask = (self.get_opacity < min_opacity).squeeze()
         if max_screen_size:
