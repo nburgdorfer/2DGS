@@ -455,7 +455,7 @@ def marching_cubes_with_contraction(
     
     return combined
 
-def render(cfg, viewpoint_camera, pc, bg_color, gradient=None, scaling_modifier = 1.0, override_color = None):
+def render(cfg, viewpoint_camera, pc, bg_color, scaling_modifier = 1.0, override_color = None):
     """
     Render the scene. 
     
@@ -493,9 +493,6 @@ def render(cfg, viewpoint_camera, pc, bg_color, gradient=None, scaling_modifier 
     means3D = pc.get_xyz
     means2D = screenspace_points
     opacity = pc.get_opacity
-    with torch.no_grad():
-        if gradient == None:
-            gradient = torch.zeros_like(means3D)
 
     scales = None
     rotations = None
@@ -511,11 +508,10 @@ def render(cfg, viewpoint_camera, pc, bg_color, gradient=None, scaling_modifier 
     else:
         colors_precomp = override_color
     
-    rendered_image, radii, allmap, gradient = rasterizer(
+    rendered_image, radii, allmap = rasterizer(
         means3D = means3D,
         means2D = means2D,
         shs = shs,
-        gradient = gradient,
         colors_precomp = colors_precomp,
         opacities = opacity,
         scales = scales,
@@ -528,8 +524,7 @@ def render(cfg, viewpoint_camera, pc, bg_color, gradient=None, scaling_modifier 
     output =  {"render": rendered_image,
             "viewspace_points": means2D,
             "visibility_filter" : radii > 0,
-            "radii": radii,
-            "gradient": gradient
+            "radii": radii
     }
 
     # additional regularizations
@@ -561,7 +556,7 @@ def render(cfg, viewpoint_camera, pc, bg_color, gradient=None, scaling_modifier 
             'rend_normal': render_normal,
             'rend_dist': render_dist,
             'surf_depth': render_depth,
-            'surf_normal': depth_normal,
+            'surf_normal': depth_normal
     })
 
     return output
@@ -577,6 +572,7 @@ def loadCam(cfg, ind, cam_info):
 
     return Camera(
                 colmap_id=cam_info["uid"],
+                cam=cam_info["cam"],
                 R=cam_info["R"],
                 T=cam_info["T"],
                 FoVx=cam_info["FovX"],

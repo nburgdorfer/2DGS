@@ -9,6 +9,7 @@ import open3d as o3d
 import mediapy as media
 
 from cvt.io import write_pfm, load_ckpt, save_ckpt
+from cvt.geometry import _render_point_cloud
 
 ## Custom libraries
 from src.config import save_config
@@ -114,6 +115,7 @@ class Pipeline():
             height, width, _ = images[i].shape
             info = {
                 "uid": 1,
+                "cam": camera,
                 "R": camera[0,:3,:3].T,
                 "T": camera[0,:3,3],
                 "FovY": focal2fov(camera[1,1,1], height),
@@ -271,22 +273,26 @@ class Pipeline():
             iter_end.record()
 
             # visualize
-            if iteration % 1 == 0:
-                mean_grad = torch.clone(gaussians.get_xyz.grad)
-                mean_grad = (mean_grad - mean_grad.min(dim=0,keepdim=True)[0]) / (mean_grad.max(dim=0,keepdim=True)[0] - mean_grad.min(dim=0,keepdim=True)[0]+1e-10)
-                print(mean_grad.shape)
-                sys.exit()
+            if iteration % 10 == 0:
+                points = torch.clone(gaussians.get_xyz)
+                grads = gaussians.get_xyz_gradient
+
                 with torch.no_grad():
+                    cloud = o3d.geometry.PointCloud()
+                    cloud.points = o3d.utility.Vector3dVector(points.detach().cpu().numpy())
+                    cloud.colors = o3d.utility.Vector3dVector(grads.reshape(-1,1).repeat(1,3).detach().cpu().numpy())
                     cam = None
                     for vc in train_cameras:
                         if vc.image_name == f"{25:08d}":
                             cam=vc
-                    render_pkg = render(self.cfg, cam, gaussians, background, mean_grad)
-                    image, gradient = render_pkg["render"], render_pkg["gradient"]
+                            break
+                    render_pkg = render(self.cfg, cam, gaussians, background)
+                    image = render_pkg["render"]
                     rendered_image = torch.movedim(image,(0,1,2),(2,0,1)).detach().cpu().numpy()[:,:,::-1]
                     cv2.imwrite(os.path.join(self.vis_path, f"image_{iteration:08d}.png"), rendered_image*255)
-                    rg = torch.movedim(gradient,(0,1,2),(2,0,1)).detach().cpu().numpy()[:,:,::-1]
-                    cv2.imwrite(os.path.join(self.vis_path, f"grad_{iteration:08d}.png"), rg*255)
+
+                    grad,_ = _render_point_cloud(cloud, cam.cam[0], cam.cam[1], rendered_image.shape[1], rendered_image.shape[0])
+                    cv2.imwrite(os.path.join(self.vis_path, f"grad_{iteration:08d}.png"), grad*255)
 
 
             with torch.no_grad():

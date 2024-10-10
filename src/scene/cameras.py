@@ -85,7 +85,7 @@ def getProjectionMatrixShift(znear, zfar, focal_x, focal_y, cx, cy, width, heigh
     return P
 
 class Camera(nn.Module):
-    def __init__(self, colmap_id, R, T, FoVx, FoVy, focal_x, focal_y, cx, cy, image, gt_alpha_mask,
+    def __init__(self, colmap_id, cam, R, T, FoVx, FoVy, focal_x, focal_y, cx, cy, image, gt_alpha_mask,
                  image_name, uid,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda"
                  ):
@@ -93,6 +93,7 @@ class Camera(nn.Module):
 
         self.uid = uid
         self.colmap_id = colmap_id
+        self.cam = cam
         self.R = R
         self.T = T
         self.FoVx = FoVx

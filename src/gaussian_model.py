@@ -104,6 +104,19 @@ class GaussianModel:
     @property
     def get_opacity(self):
         return self.opacity_activation(self._opacity)
+
+    @property
+    def get_xyz_gradient(self):
+        if self._xyz.grad == None:
+            gradient = torch.zeros_like(self._opacity)
+            gradient.requires_grad=False
+            return gradient
+        else:
+            gradient = torch.clone(self._xyz.grad)
+            gradient = torch.linalg.vector_norm(gradient, dim=1)
+            gradient = (gradient - gradient.min()) / (gradient.max() - gradient.min()+1e-10)
+            gradient.requires_grad=False
+            return gradient
     
     def get_covariance(self, scaling_modifier = 1):
         return self.covariance_activation(self.get_xyz, self.get_scaling, scaling_modifier, self._rotation)
