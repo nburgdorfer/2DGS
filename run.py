@@ -37,9 +37,8 @@ avg_fscore = np.zeros((total_samples))
 for i, scene in enumerate(scene_dict["scenes"]):
     print(f"\n----Running 2DGS on {cfg['dataset']} - {scene}----")
     pipeline = Pipeline(cfg=cfg, config_path=ARGS.config_path, scene=scene)
-    #pipeline.run()
+    pipeline.run()
     pipeline.render_outputs()
-    sys.exit()
 
     ######## 2D EVALUATION ####
     print("\n---Evaluating depth maps---")
