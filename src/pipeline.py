@@ -90,26 +90,23 @@ class Pipeline():
         render_dist_curve_fn = np.log
 
         video_kwargs = {
-            'shape': (self.dataset.H, self.dataset.W),
+            'shape': (self.dataset.H, (self.dataset.W*2)),
             'codec': 'h264',
             'fps': 60,
             'crf': 18,
         }
       
-        for k in self.cfg["rendering"]["video_maps"]:
-            video_file = os.path.join(self.video_path, f'{k}.mp4')
-            input_format = "rgb" if (k=="rendered_image" or k=="normal") else "gray"
-            with media.VideoWriter(
-                video_file, **video_kwargs, input_format=input_format) as writer:
-                for output_view in tqdm(output, desc=f"Rendering {k} video"):
-                    idx = output_view["idx"]
-                    image = output_view[k]
-                    if k=="depth":
-                        image = (np.clip(image, self.near_depth, self.far_depth) - self.near_depth) / (self.far_depth-self.near_depth+1e-10)
-                    elif k=="rendered_image":
-                        image = image[:,:,::-1]
-                    frame = (np.clip(np.nan_to_num(image), 0., 1.) * 255.).astype(np.uint8)
-                    writer.add_image(frame)
+        video_file = os.path.join(self.video_path, f'rendering.mp4')
+        with media.VideoWriter(
+            video_file, **video_kwargs, input_format="rgb") as writer:
+            for output_view in tqdm(output, desc=f"Rendering video"):
+                idx = output_view["idx"]
+                image = output_view["rendered_image"][:,:,::-1]
+                normal = output_view["normal"]
+                image_frame = (np.clip(np.nan_to_num(image), 0., 1.) * 255.).astype(np.uint8)
+                normal_frame = (np.clip(np.nan_to_num(normal), 0., 1.) * 255.).astype(np.uint8)
+                frame = np.concatenate((image_frame,normal_frame), axis=1)
+                writer.add_image(frame)
 
     def build_2dgs_scene(self, cameras, images, pcd, gaussians_file=None, shuffle=True):
         cam_infos = []

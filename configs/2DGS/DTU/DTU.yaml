@@ -59,10 +59,9 @@ point_cloud:
   resolution: dense # OPTIONS: [sparse, dense]
 
 rendering:
-  frames: 360
+  frames: 480
   iteration: -1 # gaussian model iteration to load
   maps: ['RGB', 'Alpha', 'Normal', 'Depth'] #, 'Edge', 'Curvature']
-  video_maps: ["rendered_image", "normal", "depth", "opacity"]
 
 visualization:
   ip: "127.0.0.1"
